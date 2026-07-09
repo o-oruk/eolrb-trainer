@@ -146,6 +146,10 @@ function App() {
     setPrefs((p) => ({ ...p, showMoveCount: !p.showMoveCount }));
   };
 
+  const toggleShowCube = () => {
+    setPrefs((p) => ({ ...p, showCube: !p.showCube }));
+  };
+
   const currentKey = current ? comboKey({ eoCase: current.eoCase, subcase: current.subcase }) : null;
   const currentLevel = currentKey ? progress[currentKey] : undefined;
   const masteredCount = ALL_KEYS.filter((k) => progress[k] === "mastered").length;
@@ -168,21 +172,26 @@ function App() {
             Progress: {masteredCount}/{ALL_KEYS.length}
             <span className="chevron">&#9662;</span>
           </button>
+          <button className="settings-toggle" onClick={toggleShowCube}>
+            {prefs.showCube ? "Hide cube" : "Show cube"}
+          </button>
         </div>
       </header>
 
       <main>
-        <div className="cube-panel">
-          <CubeSim
-            width={300}
-            height={300}
-            cube={facelet}
-            colorScheme={COLOR_SCHEME}
-            theme="dark"
-            facesToReveal={HINT_FACES}
-            hintDistance={HINT_DISTANCE}
-          />
-        </div>
+        {prefs.showCube && (
+          <div className="cube-panel">
+            <CubeSim
+              width={300}
+              height={300}
+              cube={facelet}
+              colorScheme={COLOR_SCHEME}
+              theme="dark"
+              facesToReveal={HINT_FACES}
+              hintDistance={HINT_DISTANCE}
+            />
+          </div>
+        )}
 
         <div className="info-panel">
           {current ? (
