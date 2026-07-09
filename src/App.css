@@ -213,8 +213,8 @@ header h1 {
 }
 
 .toggle-chip.level-mastered:not(.on) {
-  border-color: var(--success-border);
-  background: var(--success-bg);
+  border-color: var(--success-border-muted);
+  background: var(--success-bg-muted);
 }
 
 .toggle-chip.level-mastered.on {
@@ -223,8 +223,8 @@ header h1 {
 }
 
 .toggle-chip.level-learning:not(.on) {
-  border-color: var(--warning-border);
-  background: var(--warning-bg);
+  border-color: var(--warning-border-muted);
+  background: var(--warning-bg-muted);
 }
 
 .toggle-chip.level-learning.on {
