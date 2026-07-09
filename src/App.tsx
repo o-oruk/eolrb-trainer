@@ -7,8 +7,9 @@ import {
   type EOCaseId,
   type EnabledCombo,
 } from "./lib/EOLRbGenerator";
-import { loadProgress, saveProgress, type ProgressState } from "./lib/Progress";
-import { FaceletCube } from "./lib/CubeLib";
+import { loadProgress, saveProgress, nextMasteryLevel, type ProgressState, type MasteryLevel } from "./lib/Progress";
+import { loadSelection, saveSelection } from "./lib/Selection";
+import { CubieCube, FaceletCube } from "./lib/CubeLib";
 import { Face } from "./lib/Defs";
 import CubeSim from "./components/CubeSim";
 import "./App.css";
@@ -20,6 +21,7 @@ const HINT_DISTANCE = 3;
 
 // White-up / Green-front (WCA standard), in U,D,F,B,L,R,X order.
 const COLOR_SCHEME = ["#ffffff", "#ffff00", "#00b500", "#0000ff", "#ff8800", "#ff0000", "#bfbfbf"];
+const SOLVED_FACELET = FaceletCube.from_cubie(new CubieCube());
 
 function comboKey(c: EnabledCombo): string {
   return `${c.eoCase}::${c.subcase}`;
@@ -32,6 +34,19 @@ function combosForKeys(keys: Set<string>): EnabledCombo[] {
   return ALL_COMBOS.filter((c) => keys.has(comboKey(c)));
 }
 
+// First visit (nothing saved yet) defaults to everything selected. A saved
+// selection -- even an empty one -- is honored exactly, since "nothing
+// selected" is now a deliberate, supported state.
+function restoreEnabled(): Set<string> {
+  const saved = loadSelection();
+  if (saved === null) return new Set(ALL_KEYS);
+  return new Set(saved.filter((k) => ALL_KEYS.includes(k)));
+}
+
+function caseForEnabled(keys: Set<string>): EOLRbCase | null {
+  return keys.size > 0 ? generateCase(combosForKeys(keys)) : null;
+}
+
 function progressMessage(percent: number): string {
   if (percent >= 100) return "Every case mastered!";
   if (percent >= 75) return "Almost there — keep going!";
@@ -41,19 +56,29 @@ function progressMessage(percent: number): string {
   return "Ready when you are.";
 }
 
+function levelLabel(level: MasteryLevel | undefined): string {
+  if (level === "mastered") return "Learned";
+  if (level === "learning") return "Still learning";
+  return "Mark progress";
+}
+
 function App() {
-  const [enabled, setEnabled] = useState<Set<string>>(new Set(ALL_KEYS));
-  const [current, setCurrent] = useState<EOLRbCase>(() => generateCase(ALL_COMBOS));
+  const [enabled, setEnabled] = useState<Set<string>>(() => restoreEnabled());
+  const [current, setCurrent] = useState<EOLRbCase | null>(() => caseForEnabled(restoreEnabled()));
   const [revealed, setRevealed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [progressOpen, setProgressOpen] = useState(false);
   const [progress, setProgress] = useState<ProgressState>(() => loadProgress());
 
-  const facelet = useMemo(() => FaceletCube.from_cubie(current.cube), [current]);
+  const facelet = useMemo(() => (current ? FaceletCube.from_cubie(current.cube) : SOLVED_FACELET), [current]);
 
   useEffect(() => {
     saveProgress(progress);
   }, [progress]);
+
+  useEffect(() => {
+    saveSelection(Array.from(enabled));
+  }, [enabled]);
 
   useEffect(() => {
     if (!settingsOpen && !progressOpen) return;
@@ -67,14 +92,13 @@ function App() {
   }, [settingsOpen, progressOpen]);
 
   const next = (keys: Set<string> = enabled) => {
-    setCurrent(generateCase(combosForKeys(keys)));
+    setCurrent(caseForEnabled(keys));
     setRevealed(false);
   };
 
   const toggleCombo = (key: string) => {
     const nextEnabled = new Set(enabled);
     if (nextEnabled.has(key)) {
-      if (nextEnabled.size === 1) return; // keep at least one selected
       nextEnabled.delete(key);
     } else {
       nextEnabled.add(key);
@@ -90,7 +114,6 @@ function App() {
     const nextEnabled = new Set(enabled);
     if (allOn) {
       keys.forEach((k) => nextEnabled.delete(k));
-      if (nextEnabled.size === 0) return; // keep at least one selected
     } else {
       keys.forEach((k) => nextEnabled.add(k));
     }
@@ -98,8 +121,14 @@ function App() {
     next(nextEnabled);
   };
 
-  const toggleMastered = (key: string) => {
-    setProgress((prev) => ({ ...prev, [key]: !prev[key] }));
+  const cycleMastery = (key: string) => {
+    setProgress((prev) => {
+      const level = nextMasteryLevel(prev[key]);
+      const updated = { ...prev };
+      if (level) updated[key] = level;
+      else delete updated[key];
+      return updated;
+    });
   };
 
   const resetProgress = () => {
@@ -107,10 +136,12 @@ function App() {
     setProgress({});
   };
 
-  const currentKey = comboKey({ eoCase: current.eoCase, subcase: current.subcase });
-  const currentMastered = !!progress[currentKey];
-  const masteredCount = ALL_KEYS.filter((k) => progress[k]).length;
-  const percent = Math.round((masteredCount / ALL_KEYS.length) * 100);
+  const currentKey = current ? comboKey({ eoCase: current.eoCase, subcase: current.subcase }) : null;
+  const currentLevel = currentKey ? progress[currentKey] : undefined;
+  const masteredCount = ALL_KEYS.filter((k) => progress[k] === "mastered").length;
+  const learningCount = ALL_KEYS.filter((k) => progress[k] === "learning").length;
+  const masteredPct = Math.round((masteredCount / ALL_KEYS.length) * 100);
+  const learningPct = Math.round((learningCount / ALL_KEYS.length) * 100);
 
   return (
     <div id="page">
@@ -123,7 +154,7 @@ function App() {
             <span className="chevron">&#9662;</span>
           </button>
           <button className="settings-toggle progress-pill" onClick={() => setProgressOpen(true)}>
-            <span className="progress-pill-dot" style={{ "--pct": `${percent}%` } as CSSProperties} />
+            <span className="progress-pill-dot" style={{ "--pct-m": `${masteredPct}%`, "--pct-l": `${masteredPct + learningPct}%` } as CSSProperties} />
             Progress: {masteredCount}/{ALL_KEYS.length}
             <span className="chevron">&#9662;</span>
           </button>
@@ -144,57 +175,65 @@ function App() {
         </div>
 
         <div className="info-panel">
-          <div className="card">
-            <div className="card-label">Scramble</div>
-            <div className="scramble">{current.scramble}</div>
-          </div>
+          {current ? (
+            <>
+              <div className="card">
+                <div className="card-label">Scramble</div>
+                <div className="scramble">{current.scramble}</div>
+              </div>
 
-          <div className="stat-row">
-            <span className="stat-label">Minimum moves</span>
-            <span className="stat-value">{current.minMoves}</span>
-          </div>
+              <div className="stat-row">
+                <span className="stat-label">Minimum moves</span>
+                <span className="stat-value">{current.minMoves}</span>
+              </div>
 
-          <label className={`mastery-toggle ${currentMastered ? "on" : ""}`}>
-            <input
-              type="checkbox"
-              checked={currentMastered}
-              onChange={() => toggleMastered(currentKey)}
-            />
-            <span className="mastery-check">&#10003;</span>
-            <span>{currentMastered ? "Learned" : "Mark this case as learned"}</span>
-          </label>
-
-          <div className="controls">
-            {!revealed ? (
-              <button className="primary" onClick={() => setRevealed(true)}>
-                Reveal solutions
+              <button
+                type="button"
+                className={`mastery-toggle level-${currentLevel ?? "none"}`}
+                onClick={() => cycleMastery(currentKey!)}
+              >
+                <span className="mastery-check">
+                  {currentLevel === "mastered" ? "✓" : currentLevel === "learning" ? "~" : ""}
+                </span>
+                <span>{levelLabel(currentLevel)}</span>
               </button>
-            ) : (
-              <button className="primary" onClick={() => next()}>
-                Next case
-              </button>
-            )}
-          </div>
 
-          {revealed && (
-            <div className="card solutions">
-              <div className="card-label">Solutions</div>
-              <ol>
-                {current.solutions.map((sol, i) => (
-                  <li key={i}>
-                    <span className="move-count">({sol.moveCount})</span> {sol.alg}
-                  </li>
-                ))}
-              </ol>
+              <div className="controls">
+                {!revealed ? (
+                  <button className="primary" onClick={() => setRevealed(true)}>
+                    Reveal solutions
+                  </button>
+                ) : (
+                  <button className="primary" onClick={() => next()}>
+                    Next case
+                  </button>
+                )}
+              </div>
+
+              {revealed && (
+                <div className="card solutions">
+                  <div className="card-label">Solutions</div>
+                  <ol>
+                    {current.solutions.map((sol, i) => (
+                      <li key={i}>
+                        <span className="move-count">({sol.moveCount})</span> {sol.alg}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="card empty-state">
+              <div className="card-label">No cases selected</div>
+              <p>Pick at least one case to start training.</p>
+              <button className="primary" onClick={() => setSettingsOpen(true)}>
+                Choose cases
+              </button>
             </div>
           )}
         </div>
       </main>
-
-      <footer>
-        Start position: both blocks, all corners, and the middle-layer centers
-        solved (or one M2 away). Apply the scramble from there.
-      </footer>
 
       {settingsOpen && (
         <div className="modal-backdrop" onClick={() => setSettingsOpen(false)}>
@@ -219,13 +258,22 @@ function App() {
                     <div className="toggle-row">
                       {c.subcases.map((s) => {
                         const key = comboKey({ eoCase: c.id, subcase: s.id });
+                        const level = progress[key];
                         return (
-                          <label key={key} className={`toggle-chip ${enabled.has(key) ? "on" : ""}`}>
+                          <label
+                            key={key}
+                            className={`toggle-chip ${enabled.has(key) ? "on" : ""} ${level ? `level-${level}` : ""}`}
+                          >
                             <input
                               type="checkbox"
                               checked={enabled.has(key)}
                               onChange={() => toggleCombo(key)}
                             />
+                            {level && (
+                              <span className="toggle-chip-badge">
+                                {level === "mastered" ? "✓" : "~"}
+                              </span>
+                            )}
                             <span className="chip-label">{s.label}</span>
                             <span className="chip-detail">{s.detail}</span>
                           </label>
@@ -255,47 +303,56 @@ function App() {
               </button>
             </div>
             <div className="modal-body">
-              <div className={`overall-progress ${percent >= 100 ? "complete" : ""}`}>
+              <div className={`overall-progress ${masteredPct >= 100 ? "complete" : ""}`}>
                 <div className="overall-progress-top">
-                  <span className="overall-progress-count">{masteredCount}/{ALL_KEYS.length}</span>
-                  <span className="overall-progress-pct">{percent}%</span>
+                  <span className="overall-progress-count">{masteredCount}/{ALL_KEYS.length} learned</span>
+                  <span className="overall-progress-pct">{masteredPct}%</span>
                 </div>
                 <div className="progress-bar-track">
-                  <div className="progress-bar-fill" style={{ width: `${percent}%` }} />
+                  <div className="progress-bar-fill mastered" style={{ width: `${masteredPct}%` }} />
+                  <div className="progress-bar-fill learning" style={{ width: `${learningPct}%` }} />
                 </div>
-                <div className="overall-progress-message">{progressMessage(percent)}</div>
+                {learningCount > 0 && (
+                  <div className="overall-progress-sub">{learningCount} still in progress</div>
+                )}
+                <div className="overall-progress-message">{progressMessage(masteredPct)}</div>
               </div>
 
               {EO_CASES.map((c) => {
                 const keys = c.subcases.map((s) => comboKey({ eoCase: c.id, subcase: s.id }));
-                const caseMastered = keys.filter((k) => progress[k]).length;
-                const casePercent = Math.round((caseMastered / keys.length) * 100);
+                const caseMastered = keys.filter((k) => progress[k] === "mastered").length;
+                const caseLearning = keys.filter((k) => progress[k] === "learning").length;
+                const caseMasteredPct = Math.round((caseMastered / keys.length) * 100);
+                const caseLearningPct = Math.round((caseLearning / keys.length) * 100);
                 return (
                   <div key={c.id} className="eo-case-group">
                     <div className="eo-case-header progress-header">
                       <span>{c.label}</span>
-                      <span className={`case-count ${casePercent >= 100 ? "done" : ""}`}>
-                        {caseMastered}/{keys.length} {casePercent >= 100 && "✓"}
+                      <span className={`case-count ${caseMasteredPct >= 100 ? "done" : ""}`}>
+                        {caseMastered}/{keys.length} {caseMasteredPct >= 100 && "✓"}
                       </span>
                     </div>
                     <div className="mini-bar-track">
-                      <div className="mini-bar-fill" style={{ width: `${casePercent}%` }} />
+                      <div className="mini-bar-fill mastered" style={{ width: `${caseMasteredPct}%` }} />
+                      <div className="mini-bar-fill learning" style={{ width: `${caseLearningPct}%` }} />
                     </div>
                     <div className="checklist">
                       {c.subcases.map((s) => {
                         const key = comboKey({ eoCase: c.id, subcase: s.id });
-                        const mastered = !!progress[key];
+                        const level = progress[key];
                         return (
-                          <label key={key} className={`checklist-item ${mastered ? "on" : ""}`}>
-                            <input
-                              type="checkbox"
-                              checked={mastered}
-                              onChange={() => toggleMastered(key)}
-                            />
-                            <span className="checklist-check">&#10003;</span>
+                          <button
+                            type="button"
+                            key={key}
+                            className={`checklist-item ${level ? `level-${level}` : ""}`}
+                            onClick={() => cycleMastery(key)}
+                          >
+                            <span className="checklist-check">
+                              {level === "mastered" ? "✓" : level === "learning" ? "~" : ""}
+                            </span>
                             <span className="checklist-label">{s.label}</span>
                             <span className="chip-detail">{s.detail}</span>
-                          </label>
+                          </button>
                         );
                       })}
                     </div>
