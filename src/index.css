@@ -6,12 +6,15 @@
   --code-bg: #f4f3ec;
   --accent: #aa3bff;
   --accent-bg: rgba(170, 59, 255, 0.1);
+  --accent-bg-bright: rgba(170, 59, 255, 0.3);
   --accent-border: rgba(170, 59, 255, 0.5);
   --success: #16a34a;
   --success-bg: rgba(22, 163, 74, 0.1);
+  --success-bg-bright: rgba(22, 163, 74, 0.28);
   --success-border: rgba(22, 163, 74, 0.5);
   --warning: #ca8a04;
   --warning-bg: rgba(202, 138, 4, 0.12);
+  --warning-bg-bright: rgba(202, 138, 4, 0.32);
   --warning-border: rgba(202, 138, 4, 0.5);
   --social-bg: rgba(244, 243, 236, 0.5);
   --shadow:
@@ -45,12 +48,15 @@
     --code-bg: #1f2028;
     --accent: #c084fc;
     --accent-bg: rgba(192, 132, 252, 0.15);
+    --accent-bg-bright: rgba(192, 132, 252, 0.38);
     --accent-border: rgba(192, 132, 252, 0.5);
     --success: #4ade80;
     --success-bg: rgba(74, 222, 128, 0.15);
+    --success-bg-bright: rgba(74, 222, 128, 0.38);
     --success-border: rgba(74, 222, 128, 0.5);
     --warning: #facc15;
     --warning-bg: rgba(250, 204, 21, 0.15);
+    --warning-bg-bright: rgba(250, 204, 21, 0.35);
     --warning-border: rgba(250, 204, 21, 0.5);
     --social-bg: rgba(47, 48, 58, 0.5);
     --shadow:

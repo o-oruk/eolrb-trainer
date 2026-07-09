@@ -200,33 +200,36 @@ header h1 {
   border-color: var(--accent-border);
 }
 
+/*
+ * Two consistent intensity tiers, independent of hue: "muted" for
+ * unselected chips (same visual weight whether plain gray, green, or
+ * yellow) and "bright" for selected ones (same weight across purple,
+ * green, or yellow) -- selecting a chip should read as "this lit up",
+ * not "a border got added on top of whatever color it already was".
+ */
 .toggle-chip.on {
   border-color: var(--accent);
-  background: var(--accent-bg);
-}
-
-.toggle-chip.level-mastered {
-  background: var(--success-bg);
+  background: var(--accent-bg-bright);
 }
 
 .toggle-chip.level-mastered:not(.on) {
   border-color: var(--success-border);
+  background: var(--success-bg);
 }
 
 .toggle-chip.level-mastered.on {
-  box-shadow: inset 0 0 0 1px var(--success-border);
-}
-
-.toggle-chip.level-learning {
-  background: var(--warning-bg);
+  border-color: var(--success);
+  background: var(--success-bg-bright);
 }
 
 .toggle-chip.level-learning:not(.on) {
   border-color: var(--warning-border);
+  background: var(--warning-bg);
 }
 
 .toggle-chip.level-learning.on {
-  box-shadow: inset 0 0 0 1px var(--warning-border);
+  border-color: var(--warning);
+  background: var(--warning-bg-bright);
 }
 
 .toggle-chip-badge {
