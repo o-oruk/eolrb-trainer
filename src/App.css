@@ -344,6 +344,21 @@ main {
   padding: 2px 4px;
 }
 
+.stat-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.stat-toggle input {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
 .stat-label {
   font-size: 13px;
   color: var(--text);
@@ -354,6 +369,14 @@ main {
   font-size: 22px;
   font-weight: 700;
   color: var(--accent);
+}
+
+.stat-value-hidden {
+  font-size: 14px;
+  font-weight: 600;
+  font-style: italic;
+  color: var(--text);
+  opacity: 0.6;
 }
 
 .mastery-toggle {

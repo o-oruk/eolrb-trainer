@@ -9,6 +9,7 @@ import {
 } from "./lib/EOLRbGenerator";
 import { loadProgress, saveProgress, nextMasteryLevel, type ProgressState, type MasteryLevel } from "./lib/Progress";
 import { loadSelection, saveSelection } from "./lib/Selection";
+import { loadSettings, saveSettings, type Settings } from "./lib/Settings";
 import { CubieCube, FaceletCube } from "./lib/CubeLib";
 import { Face } from "./lib/Defs";
 import CubeSim from "./components/CubeSim";
@@ -69,6 +70,7 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [progressOpen, setProgressOpen] = useState(false);
   const [progress, setProgress] = useState<ProgressState>(() => loadProgress());
+  const [prefs, setPrefs] = useState<Settings>(() => loadSettings());
 
   const facelet = useMemo(() => (current ? FaceletCube.from_cubie(current.cube) : SOLVED_FACELET), [current]);
 
@@ -79,6 +81,10 @@ function App() {
   useEffect(() => {
     saveSelection(Array.from(enabled));
   }, [enabled]);
+
+  useEffect(() => {
+    saveSettings(prefs);
+  }, [prefs]);
 
   useEffect(() => {
     if (!settingsOpen && !progressOpen) return;
@@ -136,6 +142,10 @@ function App() {
     setProgress({});
   };
 
+  const toggleShowMoveCount = () => {
+    setPrefs((p) => ({ ...p, showMoveCount: !p.showMoveCount }));
+  };
+
   const currentKey = current ? comboKey({ eoCase: current.eoCase, subcase: current.subcase }) : null;
   const currentLevel = currentKey ? progress[currentKey] : undefined;
   const masteredCount = ALL_KEYS.filter((k) => progress[k] === "mastered").length;
@@ -183,8 +193,19 @@ function App() {
               </div>
 
               <div className="stat-row">
-                <span className="stat-label">Minimum moves</span>
-                <span className="stat-value">{current.minMoves}</span>
+                <label className="stat-toggle">
+                  <input
+                    type="checkbox"
+                    checked={prefs.showMoveCount}
+                    onChange={toggleShowMoveCount}
+                  />
+                  <span className="stat-label">Minimum moves</span>
+                </label>
+                {prefs.showMoveCount ? (
+                  <span className="stat-value">{current.minMoves}</span>
+                ) : (
+                  <span className="stat-value stat-value-hidden">hidden</span>
+                )}
               </div>
 
               <button
