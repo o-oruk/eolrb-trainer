@@ -288,13 +288,54 @@ main {
   width: 100%;
 }
 
-.cube-panel {
+.cube-panel-wrap {
   flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.cube-panel {
   border-radius: 12px;
   overflow: hidden;
   line-height: 0;
   background: #252525;
   box-shadow: var(--shadow);
+}
+
+.orientation-picker {
+  display: flex;
+  gap: 10px;
+}
+
+.orientation-picker label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text);
+}
+
+.orientation-picker select {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text-h);
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 8px;
+  cursor: pointer;
+}
+
+.orientation-picker select:hover {
+  border-color: var(--accent-border);
 }
 
 .info-panel {

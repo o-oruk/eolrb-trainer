@@ -10,6 +10,7 @@ import {
 import { loadProgress, saveProgress, nextMasteryLevel, type ProgressState, type MasteryLevel } from "./lib/Progress";
 import { loadSelection, saveSelection } from "./lib/Selection";
 import { loadSettings, saveSettings, type Settings } from "./lib/Settings";
+import { colorSchemeFor, validFrontsFor, COLOR_LETTERS, COLOR_NAMES, type ColorLetter } from "./lib/ColorScheme";
 import { CubieCube, FaceletCube } from "./lib/CubeLib";
 import { Face } from "./lib/Defs";
 import CubeSim from "./components/CubeSim";
@@ -20,8 +21,6 @@ import "./App.css";
 const HINT_FACES = [Face.L, Face.B, Face.D];
 const HINT_DISTANCE = 3;
 
-// White-up / Green-front (WCA standard), in U,D,F,B,L,R,X order.
-const COLOR_SCHEME = ["#ffffff", "#ffff00", "#00b500", "#0000ff", "#ff8800", "#ff0000", "#bfbfbf"];
 const SOLVED_FACELET = FaceletCube.from_cubie(new CubieCube());
 
 function comboKey(c: EnabledCombo): string {
@@ -73,6 +72,10 @@ function App() {
   const [prefs, setPrefs] = useState<Settings>(() => loadSettings());
 
   const facelet = useMemo(() => (current ? FaceletCube.from_cubie(current.cube) : SOLVED_FACELET), [current]);
+  const colorScheme = useMemo(
+    () => colorSchemeFor(prefs.topColor, prefs.frontColor),
+    [prefs.topColor, prefs.frontColor]
+  );
 
   useEffect(() => {
     saveProgress(progress);
@@ -150,6 +153,18 @@ function App() {
     setPrefs((p) => ({ ...p, showCube: !p.showCube }));
   };
 
+  const setTopColor = (top: ColorLetter) => {
+    setPrefs((p) => {
+      const validFronts = validFrontsFor(top);
+      const frontColor = validFronts.includes(p.frontColor) ? p.frontColor : validFronts[0];
+      return { ...p, topColor: top, frontColor };
+    });
+  };
+
+  const setFrontColor = (frontColor: ColorLetter) => {
+    setPrefs((p) => ({ ...p, frontColor }));
+  };
+
   const currentKey = current ? comboKey({ eoCase: current.eoCase, subcase: current.subcase }) : null;
   const currentLevel = currentKey ? progress[currentKey] : undefined;
   const masteredCount = ALL_KEYS.filter((k) => progress[k] === "mastered").length;
@@ -180,16 +195,36 @@ function App() {
 
       <main>
         {prefs.showCube && (
-          <div className="cube-panel">
-            <CubeSim
-              width={300}
-              height={300}
-              cube={facelet}
-              colorScheme={COLOR_SCHEME}
-              theme="dark"
-              facesToReveal={HINT_FACES}
-              hintDistance={HINT_DISTANCE}
-            />
+          <div className="cube-panel-wrap">
+            <div className="cube-panel">
+              <CubeSim
+                width={300}
+                height={300}
+                cube={facelet}
+                colorScheme={colorScheme}
+                theme="dark"
+                facesToReveal={HINT_FACES}
+                hintDistance={HINT_DISTANCE}
+              />
+            </div>
+            <div className="orientation-picker">
+              <label>
+                Top
+                <select value={prefs.topColor} onChange={(e) => setTopColor(e.target.value as ColorLetter)}>
+                  {COLOR_LETTERS.map((c) => (
+                    <option key={c} value={c}>{COLOR_NAMES[c]}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Front
+                <select value={prefs.frontColor} onChange={(e) => setFrontColor(e.target.value as ColorLetter)}>
+                  {validFrontsFor(prefs.topColor).map((c) => (
+                    <option key={c} value={c}>{COLOR_NAMES[c]}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
           </div>
         )}
 
