@@ -200,6 +200,14 @@ header h1 {
   border-color: var(--accent-border);
 }
 
+.toggle-chip.level-mastered:not(.on):hover {
+  border-color: var(--success-border);
+}
+
+.toggle-chip.level-learning:not(.on):hover {
+  border-color: var(--warning-border);
+}
+
 /*
  * Two consistent intensity tiers, independent of hue: "muted" for
  * unselected chips (same visual weight whether plain gray, green, or
