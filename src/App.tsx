@@ -340,7 +340,6 @@ function App() {
                               </span>
                             )}
                             <span className="chip-label">{s.label}</span>
-                            <span className="chip-detail">{s.detail}</span>
                           </label>
                         );
                       })}
@@ -416,7 +415,6 @@ function App() {
                               {level === "mastered" ? "✓" : level === "learning" ? "~" : ""}
                             </span>
                             <span className="checklist-label">{s.label}</span>
-                            <span className="chip-detail">{s.detail}</span>
                           </button>
                         );
                       })}
