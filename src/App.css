@@ -60,6 +60,42 @@ header h1 {
   opacity: 0.7;
 }
 
+.rep-counter {
+  display: inline-flex;
+  align-items: stretch;
+}
+
+.rep-pill {
+  cursor: default;
+  border-radius: 999px 0 0 999px;
+  border-right: none;
+}
+
+.rep-pill:hover {
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.rep-reset {
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 0 999px 999px 0;
+  padding: 7px 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.rep-reset:hover {
+  border-color: var(--accent-border);
+  color: var(--text-h);
+}
+
 .progress-pill-dot {
   --pct-m: 0%;
   --pct-l: 0%;

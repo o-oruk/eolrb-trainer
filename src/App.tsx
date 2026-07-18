@@ -8,6 +8,7 @@ import {
   type EnabledCombo,
 } from "./lib/EOLRbGenerator";
 import { loadProgress, saveProgress, nextMasteryLevel, type ProgressState, type MasteryLevel } from "./lib/Progress";
+import { loadRepCount, saveRepCount } from "./lib/RepCount";
 import { loadSelection, saveSelection } from "./lib/Selection";
 import { loadSettings, saveSettings, type Settings } from "./lib/Settings";
 import { colorSchemeFor, validFrontsFor, COLOR_LETTERS, COLOR_NAMES, type ColorLetter } from "./lib/ColorScheme";
@@ -70,6 +71,7 @@ function App() {
   const [progressOpen, setProgressOpen] = useState(false);
   const [progress, setProgress] = useState<ProgressState>(() => loadProgress());
   const [prefs, setPrefs] = useState<Settings>(() => loadSettings());
+  const [repCount, setRepCount] = useState<number>(() => loadRepCount());
 
   const facelet = useMemo(() => (current ? FaceletCube.from_cubie(current.cube) : SOLVED_FACELET), [current]);
   const colorScheme = useMemo(
@@ -90,6 +92,10 @@ function App() {
   }, [prefs]);
 
   useEffect(() => {
+    saveRepCount(repCount);
+  }, [repCount]);
+
+  useEffect(() => {
     if (!settingsOpen && !progressOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
@@ -104,6 +110,13 @@ function App() {
     setCurrent(caseForEnabled(keys));
     setRevealed(false);
   };
+
+  const nextRep = () => {
+    next();
+    setRepCount((c) => c + 1);
+  };
+
+  const resetRepCount = () => setRepCount(0);
 
   const toggleCombo = (key: string) => {
     const nextEnabled = new Set(enabled);
@@ -190,6 +203,12 @@ function App() {
           <button className="settings-toggle" onClick={toggleShowCube}>
             {prefs.showCube ? "Hide cube" : "Show cube"}
           </button>
+          <div className="rep-counter">
+            <span className="settings-toggle rep-pill">Reps: {repCount}</span>
+            <button className="rep-reset" onClick={resetRepCount} aria-label="Reset rep counter" title="Reset rep counter">
+              &#8635;
+            </button>
+          </div>
         </div>
       </header>
 
@@ -269,7 +288,7 @@ function App() {
                     Reveal solutions
                   </button>
                 ) : (
-                  <button className="primary" onClick={() => next()}>
+                  <button className="primary" onClick={nextRep}>
                     Next case
                   </button>
                 )}
