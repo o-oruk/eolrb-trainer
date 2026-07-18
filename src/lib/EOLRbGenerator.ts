@@ -10,6 +10,8 @@ const SLOT_NAMES: Record<number, string> = { [UF]: "UF", [UL]: "UL", [UB]: "UB",
 
 const AUF_CHOICES = ["", "U", "U'", "U2"];
 
+const OPPOSITE_OF: Record<number, number> = { [UF]: UB, [UB]: UF, [UL]: UR, [UR]: UL };
+
 // The center array (tp) after an M2: swaps U<->D and F<->B centers, i.e.
 // "yellow on top" instead of "white on top". M2 also permutes/reorients 4 of
 // our 6 edges, so we can't apply it as a real move on the finished cube --
@@ -52,6 +54,41 @@ const POSITIONAL_SUBCASES: SubcaseDef[] = [
 // positional set above.
 function orientationSplitSubcases(misoriented: [number, number], oriented: [number, number]): SubcaseDef[] {
     const name = (s: number) => SLOT_NAMES[s];
+
+    // A "mixed" placement (one misoriented + one oriented top piece) can land
+    // on a geometrically opposite pair of slots or an adjacent pair,
+    // depending on the case: when misoriented/oriented are each themselves
+    // an opposite pair (2o/0, 2o/2), every misoriented-oriented cross pick is
+    // forced adjacent -- opposite is impossible, so there's only one mixed
+    // subcase. When misoriented/oriented are each an adjacent pair (2a/0,
+    // 2a/2), cross picks split evenly into 2 opposite pairs and 2 adjacent
+    // pairs, so those are two distinct subcases to drill separately.
+    const oppositePairs: [number, number][] = [];
+    const adjacentPairs: [number, number][] = [];
+    for (const m of misoriented) {
+        for (const o of oriented) {
+            (OPPOSITE_OF[m] === o ? oppositePairs : adjacentPairs).push([m, o]);
+        }
+    }
+    const bothKindsExist = oppositePairs.length > 0 && adjacentPairs.length > 0;
+    const mixedSubcases: SubcaseDef[] = [];
+    if (oppositePairs.length > 0) {
+        mixedSubcases.push({
+            id: bothKindsExist ? "top-mixed-opposite" : "top-mixed",
+            label: bothKindsExist ? "Both top, mixed, opposite" : "Both top, mixed",
+            detail: oppositePairs.map(([m, o]) => `${name(m)} & ${name(o)}`).join(" / "),
+            getTargetSlots: () => rand_choice(oppositePairs),
+        });
+    }
+    if (adjacentPairs.length > 0) {
+        mixedSubcases.push({
+            id: bothKindsExist ? "top-mixed-adjacent" : "top-mixed",
+            label: bothKindsExist ? "Both top, mixed, adjacent" : "Both top, mixed",
+            detail: adjacentPairs.map(([m, o]) => `${name(m)} & ${name(o)}`).join(" / "),
+            getTargetSlots: () => rand_choice(adjacentPairs),
+        });
+    }
+
     return [
         { id: "both-bottom", label: "Both on bottom", detail: "DF & DB", getTargetSlots: () => [DF, DB] },
         {
@@ -70,10 +107,7 @@ function orientationSplitSubcases(misoriented: [number, number], oriented: [numb
             id: "top-both-oriented", label: "Both top, oriented", detail: oriented.map(name).join(" & "),
             getTargetSlots: () => [oriented[0], oriented[1]],
         },
-        {
-            id: "top-mixed", label: "Both top, mixed", detail: misoriented.map(name).join("/") + " & " + oriented.map(name).join("/"),
-            getTargetSlots: () => [rand_choice(misoriented), rand_choice(oriented)],
-        },
+        ...mixedSubcases,
     ];
 }
 

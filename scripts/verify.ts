@@ -20,6 +20,8 @@ function untrackedEdgesSolved(cube: CubieCube): boolean {
     return UNTRACKED_SLOTS.every((s) => cube.ep[s] === s && cube.eo[s] === 0);
 }
 
+const OPPOSITE_OF: Record<number, number> = { [UF]: UB, [UB]: UF, [UL]: UR, [UR]: UL };
+
 const IDENTITY_CENTERS = new CubieCube().tp;
 const M2_CENTERS = new CubieCube().apply("M2").tp;
 function centersAreExactlyValid(cube: CubieCube): boolean {
@@ -49,18 +51,28 @@ function classifyPositional(cube: CubieCube): string {
 // Reads orientation directly off the cube's actual eo array at the LR
 // slots -- valid regardless of AUF, since a real U-turn rotates piece and
 // orientation together (verified separately by the eoIs() check below).
-function classifyOrientationSplit(cube: CubieCube): string {
-    const [a, b] = findLrSlots(cube);
-    const aBottom = BOTTOM.has(a), bBottom = BOTTOM.has(b);
-    if (aBottom && bBottom) return "both-bottom";
-    if (aBottom !== bBottom) {
-        const topSlot = aBottom ? b : a;
-        return cube.eo[topSlot] === 1 ? "bottom-top-misoriented" : "bottom-top-oriented";
-    }
-    const aM = cube.eo[a] === 1, bM = cube.eo[b] === 1;
-    if (aM && bM) return "top-both-misoriented";
-    if (!aM && !bM) return "top-both-oriented";
-    return "top-mixed";
+// "Mixed" (one misoriented + one oriented top piece) further splits into
+// opposite/adjacent subcases only for EO cases where both actually occur
+// (2a/0, 2a/2) -- for 2o/0 and 2o/2, mixed is geometrically always adjacent,
+// so `validIds` won't contain the opposite/adjacent variants and this falls
+// back to the single "top-mixed" id, mirroring the generator's own logic.
+function makeOrientationSplitClassifier(eoCase: EOCaseId): (cube: CubieCube) => string {
+    const validIds = new Set(EO_CASES.find((c) => c.id === eoCase)!.subcases.map((s) => s.id));
+    return (cube: CubieCube): string => {
+        const [a, b] = findLrSlots(cube);
+        const aBottom = BOTTOM.has(a), bBottom = BOTTOM.has(b);
+        if (aBottom && bBottom) return "both-bottom";
+        if (aBottom !== bBottom) {
+            const topSlot = aBottom ? b : a;
+            return cube.eo[topSlot] === 1 ? "bottom-top-misoriented" : "bottom-top-oriented";
+        }
+        const aM = cube.eo[a] === 1, bM = cube.eo[b] === 1;
+        if (aM && bM) return "top-both-misoriented";
+        if (!aM && !bM) return "top-both-oriented";
+        const opposite = OPPOSITE_OF[a] === b;
+        if (opposite) return validIds.has("top-mixed-opposite") ? "top-mixed-opposite" : "top-mixed";
+        return validIds.has("top-mixed-adjacent") ? "top-mixed-adjacent" : "top-mixed";
+    };
 }
 
 // Independent classifier for the "tip/side/back" shape (arrow: 3 top
@@ -74,7 +86,6 @@ function classifyOrientationSplit(cube: CubieCube): string {
 // opposite the tip. Working out which case we're in from the count lets one
 // classifier handle both without knowing in advance which value is the odd
 // one out.
-const OPPOSITE_OF: Record<number, number> = { [UF]: UB, [UB]: UF, [UL]: UR, [UR]: UL };
 const TOP = [UF, UL, UB, UR];
 
 function classifyTipSideBack(cube: CubieCube): string {
@@ -113,10 +124,10 @@ function classifyTipSideBack(cube: CubieCube): string {
 const CLASSIFIERS: Record<EOCaseId, (cube: CubieCube) => string> = {
     "4/0": classifyPositional,
     "0/2": classifyPositional,
-    "2o/0": classifyOrientationSplit,
-    "2a/0": classifyOrientationSplit,
-    "2a/2": classifyOrientationSplit,
-    "2o/2": classifyOrientationSplit,
+    "2o/0": makeOrientationSplitClassifier("2o/0"),
+    "2a/0": makeOrientationSplitClassifier("2a/0"),
+    "2a/2": makeOrientationSplitClassifier("2a/2"),
+    "2o/2": makeOrientationSplitClassifier("2o/2"),
     "arrow": classifyTipSideBack,
     "1/1": classifyTipSideBack,
 };
