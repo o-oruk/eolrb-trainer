@@ -86,17 +86,6 @@ function App() {
     saveRepCount(repCount);
   }, [repCount]);
 
-  useEffect(() => {
-    if (!settingsOpen && !progressOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      setSettingsOpen(false);
-      setProgressOpen(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [settingsOpen, progressOpen]);
-
   const next = (keys: Set<string> = enabled) => {
     setCurrent(caseForEnabled(keys));
     setRevealed(false);
@@ -108,28 +97,6 @@ function App() {
   };
 
   const resetRepCount = () => setRepCount(0);
-
-  // Space bar drives the main flow (reveal, then next case) and nothing
-  // else, so reps can be drilled hands-mostly-on-the-cube. preventDefault
-  // unconditionally on a bare space (whenever focus isn't in a form
-  // control) so it never falls through to the browser's default
-  // page-scroll or to activating whatever button happens to have focus --
-  // e.g. re-firing the same action via native button activation, double-
-  // triggering it.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.code !== "Space" || e.repeat) return;
-      const target = e.target as HTMLElement | null;
-      const tag = target?.tagName;
-      if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA" || target?.isContentEditable) return;
-      e.preventDefault();
-      if (settingsOpen || progressOpen || !current) return;
-      if (revealed) nextRep();
-      else setRevealed(true);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [settingsOpen, progressOpen, revealed, current]);
 
   const toggleCombo = (key: string) => {
     const nextEnabled = new Set(enabled);
@@ -179,6 +146,54 @@ function App() {
     setPrefs((p) => ({ ...p, showCube: !p.showCube }));
   };
 
+  // Global keyboard shortcuts: Space drives the main flow (reveal, then
+  // next case), Escape closes whichever modal is open, C/P open case
+  // selection/progress (re-pressing the same one closes it), H toggles the
+  // cube. Ignored while focus is in a form control (so typing in a select
+  // etc. isn't hijacked), and Space always preventDefaults on a bare press
+  // so it never falls through to page-scroll or double-fires via native
+  // button activation.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setSettingsOpen(false);
+        setProgressOpen(false);
+        return;
+      }
+
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA" || target?.isContentEditable) return;
+
+      if (e.code === "Space") {
+        if (e.repeat) return;
+        e.preventDefault();
+        if (settingsOpen || progressOpen || !current) return;
+        if (revealed) nextRep();
+        else setRevealed(true);
+        return;
+      }
+
+      if (e.code === "KeyC") {
+        setSettingsOpen((v) => !v);
+        setProgressOpen(false);
+        return;
+      }
+
+      if (e.code === "KeyP") {
+        setProgressOpen((v) => !v);
+        setSettingsOpen(false);
+        return;
+      }
+
+      if (e.code === "KeyH") {
+        toggleShowCube();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [settingsOpen, progressOpen, revealed, current]);
+
   const setTopColor = (top: ColorLetter) => {
     setPrefs((p) => {
       const validFronts = validFrontsFor(top);
@@ -217,12 +232,17 @@ function App() {
             {prefs.showCube ? "Hide cube" : "Show cube"}
           </button>
           <div className="rep-counter">
-            <span className="settings-toggle rep-pill">Reps: {repCount}</span>
+            <span className="settings-toggle rep-pill">
+              Reps: <span className="rep-count-value">{repCount}</span>
+            </span>
             <button className="rep-reset" onClick={resetRepCount} aria-label="Reset rep counter" title="Reset rep counter">
               &#8635;
             </button>
           </div>
         </div>
+        <p className="keybind-hint">
+          space: reveal / next case &nbsp;·&nbsp; c: cases &nbsp;·&nbsp; p: progress &nbsp;·&nbsp; h: hide cube
+        </p>
       </header>
 
       <main>

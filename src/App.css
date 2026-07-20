@@ -96,6 +96,20 @@ header h1 {
   color: var(--text-h);
 }
 
+.rep-count-value {
+  font-family: var(--mono);
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.keybind-hint {
+  margin: 12px 0 0;
+  font-size: 11px;
+  color: var(--text);
+  opacity: 0.55;
+  text-align: center;
+}
+
 .progress-pill-dot {
   --pct-m: 0%;
   --pct-l: 0%;
