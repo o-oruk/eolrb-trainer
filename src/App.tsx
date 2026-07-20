@@ -117,6 +117,26 @@ function App() {
 
   const resetRepCount = () => setRepCount(0);
 
+  // Space bar drives "Next case" (only) so reps can be drilled hands-mostly-
+  // on-the-cube. preventDefault unconditionally on a bare space (whenever
+  // focus isn't in a form control) so it never falls through to the
+  // browser's default page-scroll or to activating whatever button happens
+  // to have focus -- e.g. re-firing "Next case" itself via native button
+  // activation, double-counting the rep.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== "Space" || e.repeat) return;
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA" || target?.isContentEditable) return;
+      e.preventDefault();
+      if (settingsOpen || progressOpen) return;
+      if (revealed && current) nextRep();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [settingsOpen, progressOpen, revealed, current]);
+
   const toggleCombo = (key: string) => {
     const nextEnabled = new Set(enabled);
     if (nextEnabled.has(key)) {
