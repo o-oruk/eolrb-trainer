@@ -656,17 +656,6 @@ main {
   font-weight: 600;
 }
 
-.overall-progress-message {
-  margin-top: 10px;
-  font-size: 13px;
-  color: var(--text);
-  text-align: center;
-}
-
-.overall-progress.complete .overall-progress-message {
-  color: var(--success);
-  font-weight: 600;
-}
 
 .progress-header {
   display: flex;

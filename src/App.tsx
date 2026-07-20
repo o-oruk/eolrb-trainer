@@ -48,14 +48,6 @@ function caseForEnabled(keys: Set<string>): EOLRbCase | null {
   return keys.size > 0 ? generateCase(combosForKeys(keys)) : null;
 }
 
-function progressMessage(percent: number): string {
-  if (percent >= 100) return "Every case mastered!";
-  if (percent >= 75) return "Almost there — keep going!";
-  if (percent >= 50) return "Halfway there!";
-  if (percent >= 25) return "Good momentum!";
-  return "Ready when you are.";
-}
-
 function levelLabel(level: MasteryLevel | undefined): string {
   if (level === "mastered") return "Learned";
   if (level === "learning") return "Still learning";
@@ -117,12 +109,13 @@ function App() {
 
   const resetRepCount = () => setRepCount(0);
 
-  // Space bar drives "Next case" (only) so reps can be drilled hands-mostly-
-  // on-the-cube. preventDefault unconditionally on a bare space (whenever
-  // focus isn't in a form control) so it never falls through to the
-  // browser's default page-scroll or to activating whatever button happens
-  // to have focus -- e.g. re-firing "Next case" itself via native button
-  // activation, double-counting the rep.
+  // Space bar drives the main flow (reveal, then next case) and nothing
+  // else, so reps can be drilled hands-mostly-on-the-cube. preventDefault
+  // unconditionally on a bare space (whenever focus isn't in a form
+  // control) so it never falls through to the browser's default
+  // page-scroll or to activating whatever button happens to have focus --
+  // e.g. re-firing the same action via native button activation, double-
+  // triggering it.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.code !== "Space" || e.repeat) return;
@@ -130,8 +123,9 @@ function App() {
       const tag = target?.tagName;
       if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA" || target?.isContentEditable) return;
       e.preventDefault();
-      if (settingsOpen || progressOpen) return;
-      if (revealed && current) nextRep();
+      if (settingsOpen || progressOpen || !current) return;
+      if (revealed) nextRep();
+      else setRevealed(true);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -417,7 +411,6 @@ function App() {
                 {learningCount > 0 && (
                   <div className="overall-progress-sub">{learningCount} still in progress</div>
                 )}
-                <div className="overall-progress-message">{progressMessage(masteredPct)}</div>
               </div>
 
               {EO_CASES.map((c) => {
