@@ -1,4 +1,4 @@
-import { CubieCube, MoveSeq, CubeUtil, Mask } from "./CubeLib";
+import { CubieCube, Move, MoveSeq, CubeUtil, Mask } from "./CubeLib";
 import { rand_choice } from "./Math";
 import { CachedSolver } from "./CachedSolver";
 
@@ -35,14 +35,19 @@ export function generate4cCase(): FourCCase {
     const constructed = build4cCube();
 
     const solveBack = rand_choice(solver.solve(constructed, 0, 20, 3));
-    const baseScramble = (solveBack ?? new MoveSeq([])).inv().toString();
+    const baseSeq = (solveBack ?? new MoveSeq([])).inv();
 
     // UL/UR are always solved-in-place at this stage (see lse_4c_mask), so
     // without this they'd visually sit in their aligned home slots every
     // single case. Tacking on one final random U/U' rotates the whole top
     // layer, so the LR pair (and everything else up top) lands somewhere
     // else -- recognition can't lean on "the top layer looks untouched".
-    const scramble = `${baseScramble} ${rand_choice(["U", "U'"])}`;
+    // .collapse() folds it into a trailing U-family move when there is one
+    // (e.g. ...U2 + U -> ...U', or ...U + U' -> cancels out entirely), and
+    // leaves it as a standalone move otherwise -- an M-family move can't
+    // cancel with a U-family AUF.
+    const auf = Move.all[rand_choice(["U", "U'"])];
+    const scramble = new MoveSeq([...baseSeq.moves, auf]).collapse().toString();
 
     // Re-derive the displayed case from the scramble itself so what's shown
     // is exactly what applying the scramble produces (see EOLRbGenerator for
