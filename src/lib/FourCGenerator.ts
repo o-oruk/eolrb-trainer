@@ -88,17 +88,16 @@ const AUF_CHOICES = ["U", "U'"];
  * The 17 given algs are each a fixed, exact solution for their case -- but
  * displaying "the scramble" as their literal inverse would let anyone who
  * can reverse a short alg in their head instantly read off the answer. So
- * instead: pick a random single AUF before and after the textbook solution
- * (never `""`/`U2`, per the "a random U/U'" spec), forming
- * `auf1 + solution + auf2`. That padded sequence is the thing we actually
- * need a scramble for -- inverting *it* still isn't shown directly (see
- * generateCase), but it's the target state the real scramble has to reach.
+ * instead: pick a random single AUF *before* the textbook solution (never
+ * `""`/`U2`, per the "a random U/U'" spec), forming `auf1 + solution`. That
+ * padded sequence is the thing we actually need a scramble for -- inverting
+ * *it* still isn't shown directly (see generateCase), but it's the target
+ * state the real scramble has to reach.
  */
 function buildTargetCube(caseDef: FourCCaseDef): CubieCube {
     const auf1 = Move.all[rand_choice(AUF_CHOICES)];
-    const auf2 = Move.all[rand_choice(AUF_CHOICES)];
     const solution = new MoveSeq(caseDef.solution);
-    const paddedSolution = new MoveSeq([auf1, ...solution.moves, auf2]);
+    const paddedSolution = new MoveSeq([auf1, ...solution.moves]);
     return new CubieCube().apply(paddedSolution.inv());
 }
 
