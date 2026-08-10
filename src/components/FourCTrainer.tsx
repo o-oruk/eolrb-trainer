@@ -1,11 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import {
-  generateCase,
-  FOUR_C_CATEGORIES,
-  allCaseIds,
-  type FourCCase,
-  type FourCCategoryId,
-} from "../lib/FourCGenerator";
+import { FOUR_C_CATEGORIES, allCaseIds, type FourCCase, type FourCCategoryId } from "../lib/FourCGenerator";
 import { loadProgress, saveProgress, nextMasteryLevel, type ProgressState, type MasteryLevel } from "../lib/Progress";
 import { loadRepCount, saveRepCount } from "../lib/RepCount";
 import { loadSelection, saveSelection } from "../lib/Selection";
@@ -21,23 +15,7 @@ import "../App.css";
 const HINT_FACES = [Face.L, Face.B, Face.D];
 const HINT_DISTANCE = 3;
 
-const PAGE_ID = "4c";
-const NAMESPACE = "4c";
-
 const ALL_IDS = allCaseIds();
-
-// First visit (nothing saved yet) defaults to everything selected. A saved
-// selection -- even an empty one -- is honored exactly, since "nothing
-// selected" is a deliberate, supported state.
-function restoreEnabled(): Set<string> {
-  const saved = loadSelection(NAMESPACE);
-  if (saved === null) return new Set(ALL_IDS);
-  return new Set(saved.filter((id) => ALL_IDS.includes(id)));
-}
-
-function caseForEnabled(ids: Set<string>): FourCCase | null {
-  return ids.size > 0 ? generateCase(Array.from(ids)) : null;
-}
 
 function levelLabel(level: MasteryLevel | undefined): string {
   if (level === "mastered") return "Learned";
@@ -45,15 +23,40 @@ function levelLabel(level: MasteryLevel | undefined): string {
   return "Mark progress";
 }
 
-function FourCTrainer() {
+// Both 4c pages (plain 4c and MC-4c) train the same 17 fixed cases with an
+// identical selection/progress/cube UI -- they differ only in how a case's
+// scramble is generated (see FourCGenerator vs MC4CGenerator), so that's
+// injected as a prop rather than duplicating this whole component.
+export type FourCTrainerProps = {
+  generateCase: (enabledIds: string[]) => FourCCase;
+  pageId: string;
+  namespace: string;
+  title: string;
+  subtitle: string;
+};
+
+function FourCTrainer({ generateCase, pageId, namespace, title, subtitle }: FourCTrainerProps) {
+  // First visit (nothing saved yet) defaults to everything selected. A
+  // saved selection -- even an empty one -- is honored exactly, since
+  // "nothing selected" is a deliberate, supported state.
+  const restoreEnabled = (): Set<string> => {
+    const saved = loadSelection(namespace);
+    if (saved === null) return new Set(ALL_IDS);
+    return new Set(saved.filter((id) => ALL_IDS.includes(id)));
+  };
+
+  const caseForEnabled = (ids: Set<string>): FourCCase | null => {
+    return ids.size > 0 ? generateCase(Array.from(ids)) : null;
+  };
+
   const [enabled, setEnabled] = useState<Set<string>>(() => restoreEnabled());
   const [current, setCurrent] = useState<FourCCase | null>(() => caseForEnabled(restoreEnabled()));
   const [revealed, setRevealed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [progressOpen, setProgressOpen] = useState(false);
-  const [progress, setProgress] = useState<ProgressState>(() => loadProgress(NAMESPACE));
+  const [progress, setProgress] = useState<ProgressState>(() => loadProgress(namespace));
   const [prefs, setPrefs] = useState<Settings>(() => loadSettings());
-  const [repCount, setRepCount] = useState<number>(() => loadRepCount(PAGE_ID));
+  const [repCount, setRepCount] = useState<number>(() => loadRepCount(pageId));
 
   const facelet = useMemo(() => (current ? FaceletCube.from_cubie(current.cube) : null), [current]);
   const colorScheme = useMemo(
@@ -62,20 +65,20 @@ function FourCTrainer() {
   );
 
   useEffect(() => {
-    saveProgress(progress, NAMESPACE);
-  }, [progress]);
+    saveProgress(progress, namespace);
+  }, [progress, namespace]);
 
   useEffect(() => {
-    saveSelection(Array.from(enabled), NAMESPACE);
-  }, [enabled]);
+    saveSelection(Array.from(enabled), namespace);
+  }, [enabled, namespace]);
 
   useEffect(() => {
     saveSettings(prefs);
   }, [prefs]);
 
   useEffect(() => {
-    saveRepCount(PAGE_ID, repCount);
-  }, [repCount]);
+    saveRepCount(pageId, repCount);
+  }, [repCount, pageId]);
 
   const next = (ids: Set<string> = enabled) => {
     setCurrent(caseForEnabled(ids));
@@ -203,8 +206,8 @@ function FourCTrainer() {
   return (
     <div id="page">
       <header>
-        <h1>4c Trainer</h1>
-        <p className="subtitle">Roux last-six-edges: the 17 fundamental 4c cases</p>
+        <h1>{title}</h1>
+        <p className="subtitle">{subtitle}</p>
         <div className="header-actions">
           <button className="settings-toggle" onClick={() => setSettingsOpen(true)}>
             Cases: {enabled.size}/{ALL_IDS.length} selected
