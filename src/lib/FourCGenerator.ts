@@ -83,7 +83,9 @@ const SOLVER_NAME = "lse"; // U/U'/U2/M/M'/M2-only solver; its one solved state 
 const AUF_CHOICES = ["U", "U'"];
 
 /**
- * Builds the cube state that this case's *padded* solution solves.
+ * Builds the cube state that this case's *padded* solution solves, plus
+ * that padded solution itself (needed so generateCase can recognize and
+ * reject the trivial, literal-inverse scramble -- see below).
  *
  * The 17 given algs are each a fixed, exact solution for their case -- but
  * displaying "the scramble" as their literal inverse would let anyone who
@@ -94,29 +96,37 @@ const AUF_CHOICES = ["U", "U'"];
  * *it* still isn't shown directly (see generateCase), but it's the target
  * state the real scramble has to reach.
  */
-function buildTargetCube(caseDef: FourCCaseDef): CubieCube {
+function buildTarget(caseDef: FourCCaseDef): { target: CubieCube; paddedSolution: MoveSeq } {
     const auf1 = Move.all[rand_choice(AUF_CHOICES)];
     const solution = new MoveSeq(caseDef.solution);
     const paddedSolution = new MoveSeq([auf1, ...solution.moves]);
-    return new CubieCube().apply(paddedSolution.inv());
+    const target = new CubieCube().apply(paddedSolution.inv());
+    return { target, paddedSolution };
 }
 
 export function generateCase(enabledIds: string[]): FourCCase {
     const pool = enabledIds.length > 0 ? enabledIds.map((id) => CASE_BY_ID.get(id)!) : ALL_CASES;
     const caseDef = rand_choice(pool);
-    const target = buildTargetCube(caseDef);
+    const { target, paddedSolution } = buildTarget(caseDef);
 
     const solver = CachedSolver.get(SOLVER_NAME);
 
     // Find a fresh path back to solved for `target` via the general LSE
     // solver rather than reusing the padded solution's literal inverse --
     // this is what actually keeps the displayed scramble from being a
-    // trivial, human-reversible mirror of the answer. The solver may well
-    // find the padded solution's own inverse is optimal and return only
-    // that, but it can also surface an equal-length alternative route
-    // (there's often more than one optimal solve for a given LSE state),
-    // and `rand_choice` picks among whatever it finds.
-    const solveBack = rand_choice(solver.solve(target, 0, 20, 3));
+    // trivial, human-reversible mirror of the answer. The solver's minimal-
+    // length solve for `target` is frequently just `paddedSolution` itself
+    // (it *is* a valid, often-optimal solve for the state it defines), so a
+    // plain rand_choice over a small candidate pool would keep landing on
+    // it by chance. Ask for a wider pool of solutions (mixing in some
+    // one-move-longer alternates once the optimal ones are exhausted),
+    // explicitly drop anything that's textually identical to
+    // `paddedSolution`, and only fall back to it if nothing else was found
+    // at all.
+    const paddedStr = paddedSolution.toString();
+    const candidates = solver.solve(target, 0, 20, 12);
+    const nonTrivial = candidates.filter((c) => c.toString() !== paddedStr);
+    const solveBack = rand_choice(nonTrivial.length > 0 ? nonTrivial : candidates);
     const scramble = (solveBack ?? new MoveSeq([])).inv().toString();
 
     // Re-derive the displayed case from the scramble itself so what's shown

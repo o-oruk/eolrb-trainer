@@ -1,4 +1,4 @@
-import { CubieCube, MoveSeq } from "../src/lib/CubeLib";
+import { CubieCube, Move, MoveSeq } from "../src/lib/CubeLib";
 import { arrayEqual } from "../src/lib/Math";
 import { generateCase, ALL_CASES, allCaseIds } from "../src/lib/FourCGenerator";
 import { CachedSolver } from "../src/lib/CachedSolver";
@@ -11,12 +11,12 @@ console.log("--- full generateCase() pipeline, everything enabled ---");
 const N = 4000;
 let comboCounts: Record<string, number> = {};
 let minMovesByCase: Record<string, number[]> = {};
-// How often the displayed scramble happens to equal the *naive* inversion
-// of that case's bare textbook solution (no AUF padding) -- should be
-// ~never, since a real scramble includes 2 random AUFs the bare inverse
-// wouldn't have, and even the padded inverse should get displaced by the
-// solver's alternate-path search some of the time.
+// How often the displayed scramble happens to literally be the naive
+// inversion of `auf1 + solution` for either possible auf1 -- this is the
+// exact "trivially reversible by eye" pattern the generator exists to
+// avoid, so any hit is a hard failure, not just a stat.
 let trivialInverseHits = 0;
+const AUF_CHOICES = ["U", "U'"];
 
 const CASE_BY_ID = new Map(ALL_CASES.map((c) => [c.id, c]));
 
@@ -64,12 +64,17 @@ for (let i = 0; i < N; i++) {
     const trueMin = Math.min(...solutions.map((s) => s.moveCount));
     if (minMoves !== trueMin) failures.push(`${tag}: minMoves=${minMoves} but true min is ${trueMin}`);
 
-    // The scramble should not literally be the naive inversion of the bare
-    // (un-padded) textbook solution -- that's the exact "trivially
-    // reversible" pattern the new generator exists to avoid.
+    // The scramble should never literally be the inverse of `auf1 +
+    // solution` for either possible auf1 choice.
     const caseDef = CASE_BY_ID.get(caseId)!;
-    const naiveInverse = new MoveSeq(caseDef.solution).inv().toString().trim();
-    if (scramble.trim() === naiveInverse) trivialInverseHits++;
+    const solutionMoves = new MoveSeq(caseDef.solution).moves;
+    const trivialInverses = AUF_CHOICES.map((auf) =>
+        new MoveSeq([Move.all[auf], ...solutionMoves]).inv().toString().trim()
+    );
+    if (trivialInverses.includes(scramble.trim())) {
+        trivialInverseHits++;
+        failures.push(`${tag}: scramble "${scramble.trim()}" is a literal padded-solution inverse`);
+    }
 }
 
 console.log("case distribution over", N, "generations:", comboCounts);
@@ -77,7 +82,7 @@ console.log("\nmin-moves range per case (sanity: should roughly track alg length
 for (const [key, arr] of Object.entries(minMovesByCase).sort()) {
     console.log(`  ${key}: min=${Math.min(...arr)} max=${Math.max(...arr)} avg=${(arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1)}`);
 }
-console.log(`\ntrivial (bare-solution-inverse) scrambles: ${trivialInverseHits}/${N}`);
+console.log(`\ntrivial (padded-solution-inverse) scrambles: ${trivialInverseHits}/${N}`);
 
 console.log("\n--- single-case pool selection ---");
 for (const id of allCaseIds()) {
