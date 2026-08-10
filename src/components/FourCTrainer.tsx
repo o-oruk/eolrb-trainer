@@ -1,6 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
-import { generate4cCase, type FourCCase } from "../lib/FourCGenerator";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import {
+  generateCase,
+  FOUR_C_CATEGORIES,
+  allCaseIds,
+  type FourCCase,
+  type FourCCategoryId,
+} from "../lib/FourCGenerator";
+import { loadProgress, saveProgress, nextMasteryLevel, type ProgressState, type MasteryLevel } from "../lib/Progress";
 import { loadRepCount, saveRepCount } from "../lib/RepCount";
+import { loadSelection, saveSelection } from "../lib/Selection";
 import { loadSettings, saveSettings, type Settings } from "../lib/Settings";
 import { colorSchemeFor, validFrontsFor, COLOR_LETTERS, COLOR_NAMES, type ColorLetter } from "../lib/ColorScheme";
 import { FaceletCube } from "../lib/CubeLib";
@@ -14,10 +22,36 @@ const HINT_FACES = [Face.L, Face.B, Face.D];
 const HINT_DISTANCE = 3;
 
 const PAGE_ID = "4c";
+const NAMESPACE = "4c";
+
+const ALL_IDS = allCaseIds();
+
+// First visit (nothing saved yet) defaults to everything selected. A saved
+// selection -- even an empty one -- is honored exactly, since "nothing
+// selected" is a deliberate, supported state.
+function restoreEnabled(): Set<string> {
+  const saved = loadSelection(NAMESPACE);
+  if (saved === null) return new Set(ALL_IDS);
+  return new Set(saved.filter((id) => ALL_IDS.includes(id)));
+}
+
+function caseForEnabled(ids: Set<string>): FourCCase | null {
+  return ids.size > 0 ? generateCase(Array.from(ids)) : null;
+}
+
+function levelLabel(level: MasteryLevel | undefined): string {
+  if (level === "mastered") return "Learned";
+  if (level === "learning") return "Still learning";
+  return "Mark progress";
+}
 
 function FourCTrainer() {
-  const [current, setCurrent] = useState<FourCCase | null>(() => generate4cCase());
+  const [enabled, setEnabled] = useState<Set<string>>(() => restoreEnabled());
+  const [current, setCurrent] = useState<FourCCase | null>(() => caseForEnabled(restoreEnabled()));
   const [revealed, setRevealed] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [progressOpen, setProgressOpen] = useState(false);
+  const [progress, setProgress] = useState<ProgressState>(() => loadProgress(NAMESPACE));
   const [prefs, setPrefs] = useState<Settings>(() => loadSettings());
   const [repCount, setRepCount] = useState<number>(() => loadRepCount(PAGE_ID));
 
@@ -28,6 +62,14 @@ function FourCTrainer() {
   );
 
   useEffect(() => {
+    saveProgress(progress, NAMESPACE);
+  }, [progress]);
+
+  useEffect(() => {
+    saveSelection(Array.from(enabled), NAMESPACE);
+  }, [enabled]);
+
+  useEffect(() => {
     saveSettings(prefs);
   }, [prefs]);
 
@@ -35,8 +77,8 @@ function FourCTrainer() {
     saveRepCount(PAGE_ID, repCount);
   }, [repCount]);
 
-  const next = () => {
-    setCurrent(generate4cCase());
+  const next = (ids: Set<string> = enabled) => {
+    setCurrent(caseForEnabled(ids));
     setRevealed(false);
   };
 
@@ -47,6 +89,46 @@ function FourCTrainer() {
 
   const resetRepCount = () => setRepCount(0);
 
+  const toggleCase = (id: string) => {
+    const nextEnabled = new Set(enabled);
+    if (nextEnabled.has(id)) {
+      nextEnabled.delete(id);
+    } else {
+      nextEnabled.add(id);
+    }
+    setEnabled(nextEnabled);
+    next(nextEnabled);
+  };
+
+  const toggleCategory = (categoryId: FourCCategoryId) => {
+    const category = FOUR_C_CATEGORIES.find((c) => c.id === categoryId)!;
+    const ids = category.cases.map((c) => c.id);
+    const allOn = ids.every((id) => enabled.has(id));
+    const nextEnabled = new Set(enabled);
+    if (allOn) {
+      ids.forEach((id) => nextEnabled.delete(id));
+    } else {
+      ids.forEach((id) => nextEnabled.add(id));
+    }
+    setEnabled(nextEnabled);
+    next(nextEnabled);
+  };
+
+  const cycleMastery = (id: string) => {
+    setProgress((prev) => {
+      const level = nextMasteryLevel(prev[id]);
+      const updated = { ...prev };
+      if (level) updated[id] = level;
+      else delete updated[id];
+      return updated;
+    });
+  };
+
+  const resetProgress = () => {
+    if (!window.confirm("Clear all mastery progress? This can't be undone.")) return;
+    setProgress({});
+  };
+
   const toggleShowMoveCount = () => {
     setPrefs((p) => ({ ...p, showMoveCount: !p.showMoveCount }));
   };
@@ -55,9 +137,17 @@ function FourCTrainer() {
     setPrefs((p) => ({ ...p, showCube: !p.showCube }));
   };
 
-  // Same Space/H shortcuts as EOLRb; no modals here so C/P/Escape don't apply.
+  // Same global keyboard shortcuts as EOLRb: Space drives the main flow,
+  // Escape closes whichever modal is open, C/P open case selection/
+  // progress, H toggles the cube.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setSettingsOpen(false);
+        setProgressOpen(false);
+        return;
+      }
+
       const target = e.target as HTMLElement | null;
       const tag = target?.tagName;
       if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA" || target?.isContentEditable) return;
@@ -65,9 +155,21 @@ function FourCTrainer() {
       if (e.code === "Space") {
         if (e.repeat) return;
         e.preventDefault();
-        if (!current) return;
+        if (settingsOpen || progressOpen || !current) return;
         if (revealed) nextRep();
         else setRevealed(true);
+        return;
+      }
+
+      if (e.code === "KeyC") {
+        setSettingsOpen((v) => !v);
+        setProgressOpen(false);
+        return;
+      }
+
+      if (e.code === "KeyP") {
+        setProgressOpen((v) => !v);
+        setSettingsOpen(false);
         return;
       }
 
@@ -77,7 +179,7 @@ function FourCTrainer() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [revealed, current]);
+  }, [settingsOpen, progressOpen, revealed, current]);
 
   const setTopColor = (top: ColorLetter) => {
     setPrefs((p) => {
@@ -91,12 +193,28 @@ function FourCTrainer() {
     setPrefs((p) => ({ ...p, frontColor }));
   };
 
+  const currentKey = current?.caseId ?? null;
+  const currentLevel = currentKey ? progress[currentKey] : undefined;
+  const masteredCount = ALL_IDS.filter((id) => progress[id] === "mastered").length;
+  const learningCount = ALL_IDS.filter((id) => progress[id] === "learning").length;
+  const masteredPct = Math.round((masteredCount / ALL_IDS.length) * 100);
+  const learningPct = Math.round((learningCount / ALL_IDS.length) * 100);
+
   return (
     <div id="page">
       <header>
         <h1>4c Trainer</h1>
-        <p className="subtitle">Roux last-six-edges: 4c with misoriented centers</p>
+        <p className="subtitle">Roux last-six-edges: the 17 fundamental 4c cases</p>
         <div className="header-actions">
+          <button className="settings-toggle" onClick={() => setSettingsOpen(true)}>
+            Cases: {enabled.size}/{ALL_IDS.length} selected
+            <span className="chevron">&#9662;</span>
+          </button>
+          <button className="settings-toggle progress-pill" onClick={() => setProgressOpen(true)}>
+            <span className="progress-pill-dot" style={{ "--pct-m": `${masteredPct}%`, "--pct-l": `${masteredPct + learningPct}%` } as CSSProperties} />
+            Progress: {masteredCount}/{ALL_IDS.length}
+            <span className="chevron">&#9662;</span>
+          </button>
           <button className="settings-toggle" onClick={toggleShowCube}>
             {prefs.showCube ? "Hide cube" : "Show cube"}
           </button>
@@ -110,7 +228,7 @@ function FourCTrainer() {
           </div>
         </div>
         <p className="keybind-hint">
-          space: reveal / next case &nbsp;·&nbsp; h: hide cube
+          space: reveal / next case &nbsp;·&nbsp; c: cases &nbsp;·&nbsp; p: progress &nbsp;·&nbsp; h: hide cube
         </p>
       </header>
 
@@ -150,7 +268,7 @@ function FourCTrainer() {
         )}
 
         <div className="info-panel">
-          {current && (
+          {current ? (
             <>
               <div className="card">
                 <div className="card-label">Scramble</div>
@@ -172,6 +290,17 @@ function FourCTrainer() {
                   <span className="stat-value stat-value-hidden">hidden</span>
                 )}
               </div>
+
+              <button
+                type="button"
+                className={`mastery-toggle level-${currentLevel ?? "none"}`}
+                onClick={() => cycleMastery(currentKey!)}
+              >
+                <span className="mastery-check">
+                  {currentLevel === "mastered" ? "✓" : currentLevel === "learning" ? "~" : ""}
+                </span>
+                <span>{levelLabel(currentLevel)}</span>
+              </button>
 
               <div className="controls">
                 {!revealed ? (
@@ -198,9 +327,149 @@ function FourCTrainer() {
                 </div>
               )}
             </>
+          ) : (
+            <div className="card empty-state">
+              <div className="card-label">No cases selected</div>
+              <p>Pick at least one case to start training.</p>
+              <button className="primary" onClick={() => setSettingsOpen(true)}>
+                Choose cases
+              </button>
+            </div>
           )}
         </div>
       </main>
+
+      {settingsOpen && (
+        <div className="modal-backdrop" onClick={() => setSettingsOpen(false)}>
+          <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Cases to train</h2>
+              <button className="modal-close" onClick={() => setSettingsOpen(false)} aria-label="Close">
+                &times;
+              </button>
+            </div>
+            <div className="modal-body">
+              {FOUR_C_CATEGORIES.map((cat) => {
+                const ids = cat.cases.map((c) => c.id);
+                const allOn = ids.every((id) => enabled.has(id));
+                const anyOn = ids.some((id) => enabled.has(id));
+                return (
+                  <div key={cat.id} className="eo-case-group">
+                    <label className={`eo-case-header ${allOn ? "on" : anyOn ? "partial" : ""}`}>
+                      <input type="checkbox" checked={allOn} onChange={() => toggleCategory(cat.id)} />
+                      <span>{cat.label}</span>
+                    </label>
+                    <div className="toggle-row">
+                      {cat.cases.map((c) => {
+                        const level = progress[c.id];
+                        return (
+                          <label
+                            key={c.id}
+                            className={`toggle-chip ${enabled.has(c.id) ? "on" : ""} ${level ? `level-${level}` : ""}`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={enabled.has(c.id)}
+                              onChange={() => toggleCase(c.id)}
+                            />
+                            {level && (
+                              <span className="toggle-chip-badge">
+                                {level === "mastered" ? "✓" : "~"}
+                              </span>
+                            )}
+                            <span className="chip-label">{c.label}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="modal-footer">
+              <button className="primary" onClick={() => setSettingsOpen(false)}>
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {progressOpen && (
+        <div className="modal-backdrop" onClick={() => setProgressOpen(false)}>
+          <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Your progress</h2>
+              <button className="modal-close" onClick={() => setProgressOpen(false)} aria-label="Close">
+                &times;
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className={`overall-progress ${masteredPct >= 100 ? "complete" : ""}`}>
+                <div className="overall-progress-top">
+                  <span className="overall-progress-count">{masteredCount}/{ALL_IDS.length} learned</span>
+                  <span className="overall-progress-pct">{masteredPct}%</span>
+                </div>
+                <div className="progress-bar-track">
+                  <div className="progress-bar-fill mastered" style={{ width: `${masteredPct}%` }} />
+                  <div className="progress-bar-fill learning" style={{ width: `${learningPct}%` }} />
+                </div>
+                {learningCount > 0 && (
+                  <div className="overall-progress-sub">{learningCount} still in progress</div>
+                )}
+              </div>
+
+              {FOUR_C_CATEGORIES.map((cat) => {
+                const ids = cat.cases.map((c) => c.id);
+                const caseMastered = ids.filter((id) => progress[id] === "mastered").length;
+                const caseLearning = ids.filter((id) => progress[id] === "learning").length;
+                const caseMasteredPct = Math.round((caseMastered / ids.length) * 100);
+                const caseLearningPct = Math.round((caseLearning / ids.length) * 100);
+                return (
+                  <div key={cat.id} className="eo-case-group">
+                    <div className="eo-case-header progress-header">
+                      <span>{cat.label}</span>
+                      <span className={`case-count ${caseMasteredPct >= 100 ? "done" : ""}`}>
+                        {caseMastered}/{ids.length} {caseMasteredPct >= 100 && "✓"}
+                      </span>
+                    </div>
+                    <div className="mini-bar-track">
+                      <div className="mini-bar-fill mastered" style={{ width: `${caseMasteredPct}%` }} />
+                      <div className="mini-bar-fill learning" style={{ width: `${caseLearningPct}%` }} />
+                    </div>
+                    <div className="checklist">
+                      {cat.cases.map((c) => {
+                        const level = progress[c.id];
+                        return (
+                          <button
+                            type="button"
+                            key={c.id}
+                            className={`checklist-item ${level ? `level-${level}` : ""}`}
+                            onClick={() => cycleMastery(c.id)}
+                          >
+                            <span className="checklist-check">
+                              {level === "mastered" ? "✓" : level === "learning" ? "~" : ""}
+                            </span>
+                            <span className="checklist-label">{c.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="modal-footer progress-footer">
+              <button className="text-button" onClick={resetProgress}>
+                Reset progress
+              </button>
+              <button className="primary" onClick={() => setProgressOpen(false)}>
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

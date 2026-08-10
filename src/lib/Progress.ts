@@ -13,14 +13,20 @@ export type ProgressState = Record<string, MasteryLevel>;
 // v2: values changed from boolean to MasteryLevel strings when the
 // learning/in-progress state was added -- bumped to avoid misreading old
 // `true` values as a mastery level.
-const STORAGE_KEY = "eolrb-trainer-progress-v2";
-
-export function loadProgress(): ProgressState {
-    return loadJSON(STORAGE_KEY, {});
+//
+// Keyed per trainer page so e.g. EOLRb and 4c progress are tracked
+// separately. "eolrb" keeps the original, pre-multi-page storage key so
+// existing progress isn't lost.
+function storageKey(namespace: string): string {
+    return namespace === "eolrb" ? "eolrb-trainer-progress-v2" : `eolrb-trainer-progress-v2:${namespace}`;
 }
 
-export function saveProgress(state: ProgressState): void {
-    saveJSON(STORAGE_KEY, state);
+export function loadProgress(namespace: string = "eolrb"): ProgressState {
+    return loadJSON(storageKey(namespace), {});
+}
+
+export function saveProgress(state: ProgressState, namespace: string = "eolrb"): void {
+    saveJSON(storageKey(namespace), state);
 }
 
 // none -> learning -> mastered -> none
