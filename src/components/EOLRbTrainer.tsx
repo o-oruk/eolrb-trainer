@@ -347,29 +347,6 @@ function EOLRbTrainer({ pageTabs }: EOLRbTrainerProps) {
                   <span className="stat-value stat-value-hidden">hidden</span>
                 )}
               </div>
-
-              <button
-                type="button"
-                className={`mastery-toggle level-${currentLevel ?? "none"}`}
-                onClick={() => cycleMastery(currentKey!)}
-              >
-                <span className="mastery-check">
-                  {currentLevel === "mastered" ? "✓" : currentLevel === "learning" ? "~" : ""}
-                </span>
-                <span>{levelLabel(currentLevel)}</span>
-              </button>
-
-              <div className="controls">
-                {!revealed ? (
-                  <button className="primary" onClick={() => setRevealed(true)}>
-                    Reveal solutions
-                  </button>
-                ) : (
-                  <button className="primary" onClick={nextRep}>
-                    Next case
-                  </button>
-                )}
-              </div>
             </>
           ) : (
             <div className="card empty-state">
@@ -401,22 +378,45 @@ function EOLRbTrainer({ pageTabs }: EOLRbTrainerProps) {
       </main>
 
       {current && (
-        <div className="notes-bar">
-          <span className="notes-bar-label">Note</span>
-          {prefs.showNotes ? (
-            <input
-              type="text"
-              className="notes-input"
-              placeholder={`Write a hint for "${currentLabel}"...`}
-              value={currentNote}
-              onChange={(e) => setNoteForCurrent(e.target.value)}
-            />
-          ) : (
-            <span className="notes-input-placeholder">hidden</span>
-          )}
-          <button type="button" className="text-button" onClick={toggleShowNotes}>
-            {prefs.showNotes ? "Hide" : "Show"}
+        <div className="action-row">
+          <button
+            type="button"
+            className={`mastery-toggle level-${currentLevel ?? "none"}`}
+            onClick={() => cycleMastery(currentKey!)}
+          >
+            <span className="mastery-check">
+              {currentLevel === "mastered" ? "✓" : currentLevel === "learning" ? "~" : ""}
+            </span>
+            <span>{levelLabel(currentLevel)}</span>
           </button>
+
+          {!revealed ? (
+            <button className="primary" onClick={() => setRevealed(true)}>
+              Reveal solutions
+            </button>
+          ) : (
+            <button className="primary" onClick={nextRep}>
+              Next case
+            </button>
+          )}
+
+          <div className="notes-bar">
+            <span className="notes-bar-label">Note</span>
+            {prefs.showNotes ? (
+              <input
+                type="text"
+                className="notes-input"
+                placeholder={`Write a hint for "${currentLabel}"...`}
+                value={currentNote}
+                onChange={(e) => setNoteForCurrent(e.target.value)}
+              />
+            ) : (
+              <span className="notes-input-placeholder">hidden</span>
+            )}
+            <button type="button" className="text-button" onClick={toggleShowNotes}>
+              {prefs.showNotes ? "Hide" : "Show"}
+            </button>
+          </div>
         </div>
       )}
 

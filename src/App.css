@@ -519,13 +519,29 @@ main {
   opacity: 0.6;
 }
 
+/* Mastery toggle, reveal/next button, and the notes bar used to each sit on
+   their own row -- three rows of vertical space for what's really one
+   cluster of "what do I do with this case" controls. One row instead. */
+.action-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.action-row .mastery-toggle,
+.action-row .primary {
+  flex: 0 0 auto;
+}
+
 .notes-bar {
   display: flex;
   align-items: center;
   gap: 10px;
-  width: 100%;
-  max-width: 780px;
-  margin-top: 24px;
+  flex: 1 1 240px;
+  min-width: 0;
   padding: 8px 14px;
   background: var(--code-bg);
   border: 1px solid var(--border);
@@ -551,6 +567,8 @@ main {
   border-radius: 6px;
   padding: 6px 10px;
   min-width: 0;
+  /* ~70% of the bar's old full-length input */
+  max-width: 350px;
 }
 
 .notes-input:focus {
@@ -727,9 +745,21 @@ main {
     max-width: 300px;
     width: 100%;
   }
+  .action-row {
+    flex-direction: column;
+    align-items: stretch;
+    max-width: 300px;
+  }
+  .action-row .mastery-toggle,
+  .action-row .primary {
+    width: 100%;
+    justify-content: center;
+  }
   .notes-bar {
     flex-wrap: wrap;
-    max-width: 300px;
+  }
+  .notes-input {
+    max-width: none;
   }
 }
 
