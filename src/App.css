@@ -637,7 +637,11 @@ main {
   font: inherit;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
+  /* Fixed width so "Mark progress" / "Still learning" / "Learned" render at
+     the same size instead of the button resizing with its label. */
+  width: 180px;
   padding: 10px 14px;
   border-radius: 8px;
   border: 1px solid var(--border);
