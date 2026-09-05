@@ -370,6 +370,20 @@ main {
   width: 100%;
 }
 
+/* Groups the cube + info column together so, if space is tight, only this
+   group wraps internally (cube above info) -- the notes panel stays put as
+   its own flex item on the right, instead of also being pushed onto a
+   wrapped line below everything (which used to make it jump around
+   whenever the info column's height changed, e.g. on reveal). */
+.main-left {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 32px;
+  flex: 1 1 620px;
+}
+
 .cube-panel-wrap {
   flex: 0 0 auto;
   display: flex;
@@ -478,8 +492,7 @@ main {
 }
 
 .notes-panel {
-  flex: 1 1 260px;
-  max-width: 320px;
+  flex: 0 0 300px;
   background: var(--code-bg);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -487,7 +500,6 @@ main {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  align-self: stretch;
 }
 
 .notes-header {
@@ -671,10 +683,17 @@ main {
     flex-direction: column;
     align-items: center;
   }
+  .main-left {
+    flex-direction: column;
+    align-items: center;
+    flex-basis: auto;
+    width: 100%;
+  }
   .info-panel {
     max-width: 300px;
   }
   .notes-panel {
+    flex-basis: auto;
     max-width: 300px;
     width: 100%;
   }
