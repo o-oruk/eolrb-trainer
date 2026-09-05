@@ -279,7 +279,6 @@ function EOLRbTrainer() {
       </header>
 
       <main>
-        <div className="main-left">
         {prefs.showCube && (
           <div className="cube-panel-wrap">
             <div className="cube-panel">
@@ -388,7 +387,6 @@ function EOLRbTrainer() {
               </button>
             </div>
           )}
-        </div>
         </div>
 
         {current && (
