@@ -5,6 +5,7 @@ import type { ColorLetter } from "./ColorScheme";
 export type Settings = {
     showMoveCount: boolean;
     showCube: boolean;
+    showNotes: boolean;
     topColor: ColorLetter;
     frontColor: ColorLetter;
 };
@@ -14,6 +15,7 @@ const STORAGE_KEY = "eolrb-trainer-settings-v1";
 const DEFAULT_SETTINGS: Settings = {
     showMoveCount: true,
     showCube: true,
+    showNotes: true,
     topColor: "W",
     frontColor: "G",
 };

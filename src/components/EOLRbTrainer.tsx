@@ -76,7 +76,6 @@ function EOLRbTrainer() {
   const [prefs, setPrefs] = useState<Settings>(() => loadSettings());
   const [repCount, setRepCount] = useState<number>(() => loadRepCount(PAGE_ID));
   const [notes, setNotes] = useState<NotesState>(() => loadNotes(PAGE_ID));
-  const [hintVisible, setHintVisible] = useState(false);
 
   const facelet = useMemo(() => (current ? FaceletCube.from_cubie(current.cube) : SOLVED_FACELET), [current]);
   const colorScheme = useMemo(
@@ -107,7 +106,6 @@ function EOLRbTrainer() {
   const next = (keys: Set<string> = enabled) => {
     setCurrent(caseForEnabled(keys));
     setRevealed(false);
-    setHintVisible(false);
   };
 
   const nextRep = () => {
@@ -163,6 +161,10 @@ function EOLRbTrainer() {
 
   const toggleShowCube = () => {
     setPrefs((p) => ({ ...p, showCube: !p.showCube }));
+  };
+
+  const toggleShowNotes = () => {
+    setPrefs((p) => ({ ...p, showNotes: !p.showNotes }));
   };
 
   // Global keyboard shortcuts: Space drives the main flow (reveal, then
@@ -351,27 +353,6 @@ function EOLRbTrainer() {
                 <span>{levelLabel(currentLevel)}</span>
               </button>
 
-              <div className="card notes-card">
-                <div className="notes-header">
-                  <div className="card-label">Notes</div>
-                  <button
-                    type="button"
-                    className="text-button"
-                    onClick={() => setHintVisible((v) => !v)}
-                  >
-                    {hintVisible ? "Hide hint" : "Show hint"}
-                  </button>
-                </div>
-                {hintVisible && (
-                  <textarea
-                    className="notes-textarea"
-                    placeholder={`Write a hint for "${currentLabel}"...`}
-                    value={currentNote}
-                    onChange={(e) => setNoteForCurrent(e.target.value)}
-                  />
-                )}
-              </div>
-
               <div className="controls">
                 {!revealed ? (
                   <button className="primary" onClick={() => setRevealed(true)}>
@@ -407,6 +388,29 @@ function EOLRbTrainer() {
             </div>
           )}
         </div>
+
+        {current && (
+          <div className="notes-panel">
+            <div className="notes-header">
+              <div className="card-label">Notes</div>
+              <button
+                type="button"
+                className="text-button"
+                onClick={toggleShowNotes}
+              >
+                {prefs.showNotes ? "Hide" : "Show"}
+              </button>
+            </div>
+            {prefs.showNotes && (
+              <textarea
+                className="notes-textarea"
+                placeholder={`Write a hint for "${currentLabel}"...`}
+                value={currentNote}
+                onChange={(e) => setNoteForCurrent(e.target.value)}
+              />
+            )}
+          </div>
+        )}
       </main>
 
       {settingsOpen && (
