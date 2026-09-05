@@ -35,7 +35,7 @@
   flex-direction: column;
   align-items: center;
   width: 100%;
-  max-width: 780px;
+  max-width: 1120px;
   margin: 0 auto;
   padding: 40px 20px 24px;
   box-sizing: border-box;
@@ -361,20 +361,13 @@ header h1 {
   color: var(--text);
 }
 
-/* Cube, info, and notes always sit side by side in one row -- nowrap means
-   a column never gets pushed onto a line below the others (which used to
-   make the notes panel jump down whenever the info column's height changed,
-   e.g. on reveal). If the viewport is too narrow to fit all three, they
-   shrink instead of wrapping; only the small-screen media query below
-   switches to a stacked layout. */
 main {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   justify-content: center;
   align-items: flex-start;
-  gap: 24px;
+  gap: 32px;
   width: 100%;
-  overflow-x: auto;
 }
 
 .cube-panel-wrap {
@@ -485,9 +478,7 @@ main {
 }
 
 .notes-panel {
-  flex: 1 1 260px;
-  min-width: 200px;
-  max-width: 300px;
+  flex: 0 0 300px;
   background: var(--code-bg);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -677,14 +668,12 @@ main {
   main {
     flex-direction: column;
     align-items: center;
-    overflow-x: visible;
   }
   .info-panel {
     max-width: 300px;
   }
   .notes-panel {
     flex-basis: auto;
-    min-width: 0;
     max-width: 300px;
     width: 100%;
   }
