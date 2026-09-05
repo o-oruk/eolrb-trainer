@@ -536,6 +536,13 @@ main {
   flex: 0 0 auto;
 }
 
+/* Fixed width so "Reveal solutions" and "Next case" render at the same
+   size instead of the button shrinking/growing with its label text. */
+.action-primary {
+  width: 190px;
+  text-align: center;
+}
+
 .notes-bar {
   display: flex;
   align-items: center;

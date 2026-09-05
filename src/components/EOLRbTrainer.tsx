@@ -391,11 +391,11 @@ function EOLRbTrainer({ pageTabs }: EOLRbTrainerProps) {
           </button>
 
           {!revealed ? (
-            <button className="primary" onClick={() => setRevealed(true)}>
+            <button className="primary action-primary" onClick={() => setRevealed(true)}>
               Reveal solutions
             </button>
           ) : (
-            <button className="primary" onClick={nextRep}>
+            <button className="primary action-primary" onClick={nextRep}>
               Next case
             </button>
           )}
