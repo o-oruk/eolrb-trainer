@@ -370,19 +370,6 @@ function EOLRbTrainer({ pageTabs }: EOLRbTrainerProps) {
                   </button>
                 )}
               </div>
-
-              {revealed && (
-                <div className="card solutions">
-                  <div className="card-label">Solutions</div>
-                  <ol>
-                    {current.solutions.map((sol, i) => (
-                      <li key={i}>
-                        <span className="move-count">({sol.moveCount})</span> {sol.alg}
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-              )}
             </>
           ) : (
             <div className="card empty-state">
@@ -396,28 +383,42 @@ function EOLRbTrainer({ pageTabs }: EOLRbTrainerProps) {
         </div>
 
         {current && (
-          <div className="notes-panel">
-            <div className="notes-header">
-              <div className="card-label">Notes</div>
-              <button
-                type="button"
-                className="text-button"
-                onClick={toggleShowNotes}
-              >
-                {prefs.showNotes ? "Hide" : "Show"}
-              </button>
-            </div>
-            {prefs.showNotes && (
-              <textarea
-                className="notes-textarea"
-                placeholder={`Write a hint for "${currentLabel}"...`}
-                value={currentNote}
-                onChange={(e) => setNoteForCurrent(e.target.value)}
-              />
+          <div className="solutions-panel">
+            <div className="card-label">Solutions</div>
+            {revealed ? (
+              <ol>
+                {current.solutions.map((sol, i) => (
+                  <li key={i}>
+                    <span className="move-count">({sol.moveCount})</span> {sol.alg}
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="solutions-placeholder">Reveal to see solutions here.</p>
             )}
           </div>
         )}
       </main>
+
+      {current && (
+        <div className="notes-bar">
+          <span className="notes-bar-label">Note</span>
+          {prefs.showNotes ? (
+            <input
+              type="text"
+              className="notes-input"
+              placeholder={`Write a hint for "${currentLabel}"...`}
+              value={currentNote}
+              onChange={(e) => setNoteForCurrent(e.target.value)}
+            />
+          ) : (
+            <span className="notes-input-placeholder">hidden</span>
+          )}
+          <button type="button" className="text-button" onClick={toggleShowNotes}>
+            {prefs.showNotes ? "Hide" : "Show"}
+          </button>
+        </div>
+      )}
 
       {settingsOpen && (
         <div className="modal-backdrop" onClick={() => setSettingsOpen(false)}>
