@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import {
   generateCase,
   EO_CASES,
@@ -66,7 +66,11 @@ function levelLabel(level: MasteryLevel | undefined): string {
   return "Mark progress";
 }
 
-function EOLRbTrainer() {
+type EOLRbTrainerProps = {
+  pageTabs: ReactNode;
+};
+
+function EOLRbTrainer({ pageTabs }: EOLRbTrainerProps) {
   const [enabled, setEnabled] = useState<Set<string>>(() => restoreEnabled());
   const [current, setCurrent] = useState<EOLRbCase | null>(() => caseForEnabled(restoreEnabled()));
   const [revealed, setRevealed] = useState(false);
@@ -252,6 +256,8 @@ function EOLRbTrainer() {
         <h1>EOLRb Trainer</h1>
         <p className="subtitle">Roux last-six-edges: EO + LR insertion</p>
         <div className="header-actions">
+          {pageTabs}
+          <div className="tab-divider" />
           <button className="settings-toggle" onClick={() => setSettingsOpen(true)}>
             Cases: {enabled.size}/{ALL_KEYS.length} selected
             <span className="chevron">&#9662;</span>

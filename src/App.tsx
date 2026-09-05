@@ -17,32 +17,39 @@ function App() {
     saveJSON(STORAGE_KEY, page);
   }, [page]);
 
+  // Rendered by whichever trainer is active, inline in its own
+  // header-actions row (with a divider) instead of as a separate row of its
+  // own -- see conversation: the page switcher, the title, and the
+  // settings/progress/cube/reps pills used to each claim a full row.
+  const pageTabs = (
+    <div className="tab-group">
+      <button
+        type="button"
+        className={`page-tab ${page === "eolrb" ? "active" : ""}`}
+        onClick={() => setPage("eolrb")}
+      >
+        EOLRb
+      </button>
+      <button
+        type="button"
+        className={`page-tab ${page === "4c" ? "active" : ""}`}
+        onClick={() => setPage("4c")}
+      >
+        4c
+      </button>
+      <button
+        type="button"
+        className={`page-tab ${page === "mc4c" ? "active" : ""}`}
+        onClick={() => setPage("mc4c")}
+      >
+        MC-4c
+      </button>
+    </div>
+  );
+
   return (
     <>
-      <div className="page-tabs">
-        <button
-          type="button"
-          className={`page-tab ${page === "eolrb" ? "active" : ""}`}
-          onClick={() => setPage("eolrb")}
-        >
-          EOLRb
-        </button>
-        <button
-          type="button"
-          className={`page-tab ${page === "4c" ? "active" : ""}`}
-          onClick={() => setPage("4c")}
-        >
-          4c
-        </button>
-        <button
-          type="button"
-          className={`page-tab ${page === "mc4c" ? "active" : ""}`}
-          onClick={() => setPage("mc4c")}
-        >
-          MC-4c
-        </button>
-      </div>
-      {page === "eolrb" && <EOLRbTrainer />}
+      {page === "eolrb" && <EOLRbTrainer pageTabs={pageTabs} />}
       {page === "4c" && (
         <FourCTrainer
           generateCase={generate4cCase}
@@ -50,6 +57,7 @@ function App() {
           namespace="4c"
           title="4c Trainer"
           subtitle="Roux last-six-edges: the 17 fundamental 4c cases"
+          pageTabs={pageTabs}
         />
       )}
       {page === "mc4c" && (
@@ -59,6 +67,7 @@ function App() {
           namespace="mc4c"
           title="MC-4c Trainer"
           subtitle="Roux last-six-edges: 4c with a corrective trailing M/M' turn"
+          pageTabs={pageTabs}
         />
       )}
     </>

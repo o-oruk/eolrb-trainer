@@ -1,19 +1,28 @@
-.page-tabs {
+/* The page switcher (EOLRb/4c/MC-4c) renders inline as the first group in
+   each trainer's .header-actions row, followed by .tab-divider and then
+   that trainer's own settings/progress/cube/reps pills -- one row, two
+   visually distinct groups -- instead of claiming a whole row of its own. */
+.tab-group {
   display: flex;
-  justify-content: center;
   gap: 8px;
-  padding: 10px 20px 0;
+}
+
+.tab-divider {
+  width: 1px;
+  align-self: stretch;
+  background: var(--border);
+  margin: 0 2px;
 }
 
 .page-tab {
   font: inherit;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text);
   background: var(--code-bg);
   border: 1px solid var(--border);
   border-radius: 999px;
-  padding: 7px 20px;
+  padding: 5px 14px;
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s, background 0.15s;
 }

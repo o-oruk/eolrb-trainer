@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { FOUR_C_CATEGORIES, allCaseIds, type FourCCase, type FourCCategoryId } from "../lib/FourCGenerator";
 import { loadProgress, saveProgress, nextMasteryLevel, type ProgressState, type MasteryLevel } from "../lib/Progress";
 import { loadRepCount, saveRepCount } from "../lib/RepCount";
@@ -33,9 +33,10 @@ export type FourCTrainerProps = {
   namespace: string;
   title: string;
   subtitle: string;
+  pageTabs: ReactNode;
 };
 
-function FourCTrainer({ generateCase, pageId, namespace, title, subtitle }: FourCTrainerProps) {
+function FourCTrainer({ generateCase, pageId, namespace, title, subtitle, pageTabs }: FourCTrainerProps) {
   // First visit (nothing saved yet) defaults to everything selected. A
   // saved selection -- even an empty one -- is honored exactly, since
   // "nothing selected" is a deliberate, supported state.
@@ -209,6 +210,8 @@ function FourCTrainer({ generateCase, pageId, namespace, title, subtitle }: Four
         <h1>{title}</h1>
         <p className="subtitle">{subtitle}</p>
         <div className="header-actions">
+          {pageTabs}
+          <div className="tab-divider" />
           <button className="settings-toggle" onClick={() => setSettingsOpen(true)}>
             Cases: {enabled.size}/{ALL_IDS.length} selected
             <span className="chevron">&#9662;</span>
