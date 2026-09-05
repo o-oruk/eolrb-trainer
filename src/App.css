@@ -471,6 +471,45 @@ main {
   word-spacing: 0.15em;
 }
 
+.case-name {
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.notes-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.notes-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.notes-header .card-label {
+  margin-bottom: 0;
+}
+
+.notes-textarea {
+  font: inherit;
+  font-size: 14px;
+  color: var(--text-h);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  min-height: 80px;
+  resize: vertical;
+}
+
+.notes-textarea:focus {
+  outline: none;
+  border-color: var(--accent-border);
+}
+
 .stat-row {
   display: flex;
   align-items: baseline;

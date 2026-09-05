@@ -9,6 +9,7 @@ import {
 } from "../lib/EOLRbGenerator";
 import { loadProgress, saveProgress, nextMasteryLevel, type ProgressState, type MasteryLevel } from "../lib/Progress";
 import { loadRepCount, saveRepCount } from "../lib/RepCount";
+import { loadNotes, saveNotes, type NotesState } from "../lib/Notes";
 import { loadSelection, saveSelection } from "../lib/Selection";
 import { loadSettings, saveSettings, type Settings } from "../lib/Settings";
 import { colorSchemeFor, validFrontsFor, COLOR_LETTERS, COLOR_NAMES, type ColorLetter } from "../lib/ColorScheme";
@@ -32,6 +33,15 @@ function comboKey(c: EnabledCombo): string {
 
 const ALL_COMBOS = allCombos();
 const ALL_KEYS = ALL_COMBOS.map(comboKey);
+const EO_CASE_BY_ID = new Map(EO_CASES.map((c) => [c.id, c]));
+
+// Human-readable name for the case currently being drilled, e.g.
+// "4/0 · Both on top, opposite".
+function caseLabel(eoCase: EOCaseId, subcase: string): string {
+  const def = EO_CASE_BY_ID.get(eoCase);
+  const sub = def?.subcases.find((s) => s.id === subcase);
+  return sub ? `${def!.label} · ${sub.label}` : eoCase;
+}
 
 function combosForKeys(keys: Set<string>): EnabledCombo[] {
   return ALL_COMBOS.filter((c) => keys.has(comboKey(c)));
@@ -65,6 +75,8 @@ function EOLRbTrainer() {
   const [progress, setProgress] = useState<ProgressState>(() => loadProgress());
   const [prefs, setPrefs] = useState<Settings>(() => loadSettings());
   const [repCount, setRepCount] = useState<number>(() => loadRepCount(PAGE_ID));
+  const [notes, setNotes] = useState<NotesState>(() => loadNotes(PAGE_ID));
+  const [hintVisible, setHintVisible] = useState(false);
 
   const facelet = useMemo(() => (current ? FaceletCube.from_cubie(current.cube) : SOLVED_FACELET), [current]);
   const colorScheme = useMemo(
@@ -88,9 +100,14 @@ function EOLRbTrainer() {
     saveRepCount(PAGE_ID, repCount);
   }, [repCount]);
 
+  useEffect(() => {
+    saveNotes(PAGE_ID, notes);
+  }, [notes]);
+
   const next = (keys: Set<string> = enabled) => {
     setCurrent(caseForEnabled(keys));
     setRevealed(false);
+    setHintVisible(false);
   };
 
   const nextRep = () => {
@@ -210,6 +227,18 @@ function EOLRbTrainer() {
 
   const currentKey = current ? comboKey({ eoCase: current.eoCase, subcase: current.subcase }) : null;
   const currentLevel = currentKey ? progress[currentKey] : undefined;
+  const currentLabel = current ? caseLabel(current.eoCase, current.subcase) : null;
+  const currentNote = currentKey ? notes[currentKey] ?? "" : "";
+
+  const setNoteForCurrent = (value: string) => {
+    if (!currentKey) return;
+    setNotes((prev) => {
+      const updated = { ...prev };
+      if (value.trim() === "") delete updated[currentKey];
+      else updated[currentKey] = value;
+      return updated;
+    });
+  };
   const masteredCount = ALL_KEYS.filter((k) => progress[k] === "mastered").length;
   const learningCount = ALL_KEYS.filter((k) => progress[k] === "learning").length;
   const masteredPct = Math.round((masteredCount / ALL_KEYS.length) * 100);
@@ -286,6 +315,11 @@ function EOLRbTrainer() {
           {current ? (
             <>
               <div className="card">
+                <div className="card-label">Case</div>
+                <div className="case-name">{currentLabel}</div>
+              </div>
+
+              <div className="card">
                 <div className="card-label">Scramble</div>
                 <div className="scramble">{current.scramble}</div>
               </div>
@@ -316,6 +350,27 @@ function EOLRbTrainer() {
                 </span>
                 <span>{levelLabel(currentLevel)}</span>
               </button>
+
+              <div className="card notes-card">
+                <div className="notes-header">
+                  <div className="card-label">Notes</div>
+                  <button
+                    type="button"
+                    className="text-button"
+                    onClick={() => setHintVisible((v) => !v)}
+                  >
+                    {hintVisible ? "Hide hint" : "Show hint"}
+                  </button>
+                </div>
+                {hintVisible && (
+                  <textarea
+                    className="notes-textarea"
+                    placeholder={`Write a hint for "${currentLabel}"...`}
+                    value={currentNote}
+                    onChange={(e) => setNoteForCurrent(e.target.value)}
+                  />
+                )}
+              </div>
 
               <div className="controls">
                 {!revealed ? (
