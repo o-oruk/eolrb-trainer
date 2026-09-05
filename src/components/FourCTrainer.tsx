@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
-import { FOUR_C_CATEGORIES, allCaseIds, type FourCCase, type FourCCategoryId } from "../lib/FourCGenerator";
+import { FOUR_C_CATEGORIES, ALL_CASES, allCaseIds, type FourCCase, type FourCCategoryId } from "../lib/FourCGenerator";
 import { loadProgress, saveProgress, nextMasteryLevel, type ProgressState, type MasteryLevel } from "../lib/Progress";
 import { loadRepCount, saveRepCount } from "../lib/RepCount";
+import { loadNotes, saveNotes, type NotesState } from "../lib/Notes";
 import { loadSelection, saveSelection } from "../lib/Selection";
 import { loadSettings, saveSettings, type Settings } from "../lib/Settings";
 import { colorSchemeFor, validFrontsFor, COLOR_LETTERS, COLOR_NAMES, type ColorLetter } from "../lib/ColorScheme";
@@ -58,6 +59,7 @@ function FourCTrainer({ generateCase, pageId, namespace, title, subtitle, pageTa
   const [progress, setProgress] = useState<ProgressState>(() => loadProgress(namespace));
   const [prefs, setPrefs] = useState<Settings>(() => loadSettings());
   const [repCount, setRepCount] = useState<number>(() => loadRepCount(pageId));
+  const [notes, setNotes] = useState<NotesState>(() => loadNotes(pageId));
 
   const facelet = useMemo(() => (current ? FaceletCube.from_cubie(current.cube) : null), [current]);
   const colorScheme = useMemo(
@@ -80,6 +82,10 @@ function FourCTrainer({ generateCase, pageId, namespace, title, subtitle, pageTa
   useEffect(() => {
     saveRepCount(pageId, repCount);
   }, [repCount, pageId]);
+
+  useEffect(() => {
+    saveNotes(pageId, notes);
+  }, [notes, pageId]);
 
   const next = (ids: Set<string> = enabled) => {
     setCurrent(caseForEnabled(ids));
@@ -141,6 +147,10 @@ function FourCTrainer({ generateCase, pageId, namespace, title, subtitle, pageTa
     setPrefs((p) => ({ ...p, showCube: !p.showCube }));
   };
 
+  const toggleShowNotes = () => {
+    setPrefs((p) => ({ ...p, showNotes: !p.showNotes }));
+  };
+
   // Same global keyboard shortcuts as EOLRb: Space drives the main flow,
   // Escape closes whichever modal is open, C/P open case selection/
   // progress, H toggles the cube.
@@ -199,6 +209,19 @@ function FourCTrainer({ generateCase, pageId, namespace, title, subtitle, pageTa
 
   const currentKey = current?.caseId ?? null;
   const currentLevel = currentKey ? progress[currentKey] : undefined;
+  const currentLabel = currentKey ? ALL_CASES.find((c) => c.id === currentKey)?.label ?? currentKey : null;
+  const currentNote = currentKey ? notes[currentKey] ?? "" : "";
+
+  const setNoteForCurrent = (value: string) => {
+    if (!currentKey) return;
+    setNotes((prev) => {
+      const updated = { ...prev };
+      if (value.trim() === "") delete updated[currentKey];
+      else updated[currentKey] = value;
+      return updated;
+    });
+  };
+
   const masteredCount = ALL_IDS.filter((id) => progress[id] === "mastered").length;
   const learningCount = ALL_IDS.filter((id) => progress[id] === "learning").length;
   const masteredPct = Math.round((masteredCount / ALL_IDS.length) * 100);
@@ -277,6 +300,11 @@ function FourCTrainer({ generateCase, pageId, namespace, title, subtitle, pageTa
           {current ? (
             <>
               <div className="card">
+                <div className="card-label">Case</div>
+                <div className="case-name">{currentLabel}</div>
+              </div>
+
+              <div className="card">
                 <div className="card-label">Scramble</div>
                 <div className="scramble">{current.scramble}</div>
               </div>
@@ -296,42 +324,6 @@ function FourCTrainer({ generateCase, pageId, namespace, title, subtitle, pageTa
                   <span className="stat-value stat-value-hidden">hidden</span>
                 )}
               </div>
-
-              <button
-                type="button"
-                className={`mastery-toggle level-${currentLevel ?? "none"}`}
-                onClick={() => cycleMastery(currentKey!)}
-              >
-                <span className="mastery-check">
-                  {currentLevel === "mastered" ? "✓" : currentLevel === "learning" ? "~" : ""}
-                </span>
-                <span>{levelLabel(currentLevel)}</span>
-              </button>
-
-              <div className="controls">
-                {!revealed ? (
-                  <button className="primary" onClick={() => setRevealed(true)}>
-                    Reveal solutions
-                  </button>
-                ) : (
-                  <button className="primary" onClick={nextRep}>
-                    Next case
-                  </button>
-                )}
-              </div>
-
-              {revealed && (
-                <div className="card solutions">
-                  <div className="card-label">Solutions</div>
-                  <ol>
-                    {current.solutions.map((sol, i) => (
-                      <li key={i}>
-                        <span className="move-count">({sol.moveCount})</span> {sol.alg}
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-              )}
             </>
           ) : (
             <div className="card empty-state">
@@ -343,7 +335,67 @@ function FourCTrainer({ generateCase, pageId, namespace, title, subtitle, pageTa
             </div>
           )}
         </div>
+
+        {current && (
+          <div className="solutions-panel">
+            <div className="card-label">Solutions</div>
+            {revealed ? (
+              <ol>
+                {current.solutions.map((sol, i) => (
+                  <li key={i}>
+                    <span className="move-count">({sol.moveCount})</span> {sol.alg}
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="solutions-placeholder">Reveal to see solutions here.</p>
+            )}
+          </div>
+        )}
       </main>
+
+      {current && (
+        <div className="action-row">
+          <button
+            type="button"
+            className={`mastery-toggle level-${currentLevel ?? "none"}`}
+            onClick={() => cycleMastery(currentKey!)}
+          >
+            <span className="mastery-check">
+              {currentLevel === "mastered" ? "✓" : currentLevel === "learning" ? "~" : ""}
+            </span>
+            <span>{levelLabel(currentLevel)}</span>
+          </button>
+
+          {!revealed ? (
+            <button className="primary action-primary" onClick={() => setRevealed(true)}>
+              Reveal solutions
+            </button>
+          ) : (
+            <button className="primary action-primary" onClick={nextRep}>
+              Next case
+            </button>
+          )}
+
+          <div className="notes-bar">
+            <span className="notes-bar-label">Note</span>
+            {prefs.showNotes ? (
+              <input
+                type="text"
+                className="notes-input"
+                placeholder={`Write a hint for "${currentLabel}"...`}
+                value={currentNote}
+                onChange={(e) => setNoteForCurrent(e.target.value)}
+              />
+            ) : (
+              <span className="notes-input-placeholder">hidden</span>
+            )}
+            <button type="button" className="text-button" onClick={toggleShowNotes}>
+              {prefs.showNotes ? "Hide" : "Show"}
+            </button>
+          </div>
+        </div>
+      )}
 
       {settingsOpen && (
         <div className="modal-backdrop" onClick={() => setSettingsOpen(false)}>
