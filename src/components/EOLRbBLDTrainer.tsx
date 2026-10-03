@@ -128,6 +128,18 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
     setLastAttempt(null);
   };
 
+  // Wipes one case's record back to "never attempted". The session tally is
+  // left alone -- it's a running count, not tied to specific cases.
+  const clearCaseStats = (key: string, label: string) => {
+    if (!window.confirm(`Clear blindfolded stats for "${label}"? This can't be undone.`)) return;
+    setStats((s) => {
+      const next = { ...s };
+      delete next[key];
+      return next;
+    });
+    if (lastAttempt?.key === key) setLastAttempt(null);
+  };
+
   const toggleCombo = (key: string) => {
     const nextEnabled = new Set(enabled);
     if (nextEnabled.has(key)) nextEnabled.delete(key);
@@ -506,6 +518,7 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
                         <span role="columnheader">Yes</span>
                         <span role="columnheader">No</span>
                         <span role="columnheader">Success</span>
+                        <span role="columnheader" aria-label="Clear" />
                       </div>
                       {c.subcases.map((s) => {
                         const key = comboKey({ eoCase: c.id, subcase: s.id });
@@ -520,6 +533,19 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
                             <span className="bld-rate-cell" role="cell">
                               <span className={`bld-rate-text bld-rate-${rateTier(pct)}`}>{pctText(pct)}</span>
                               <RateBar stats={st ?? { yes: 0, no: 0 }} className="mini-bar-track bld-mini-bar" />
+                            </span>
+                            <span role="cell">
+                              {st && (
+                                <button
+                                  type="button"
+                                  className="bld-row-clear"
+                                  onClick={() => clearCaseStats(key, caseLabel(c.id, s.id))}
+                                  aria-label={`Clear stats for ${s.label}`}
+                                  title="Clear this case's stats"
+                                >
+                                  &times;
+                                </button>
+                              )}
                             </span>
                           </div>
                         );
