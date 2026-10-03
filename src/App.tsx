@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { loadJSON, saveJSON } from "./lib/Storage";
 import EOLRbTrainer from "./components/EOLRbTrainer";
+import EOLRbBLDTrainer from "./components/EOLRbBLDTrainer";
 import FourCTrainer from "./components/FourCTrainer";
 import { generateCase as generate4cCase } from "./lib/FourCGenerator";
 import { generateCase as generateMc4cCase } from "./lib/MC4CGenerator";
 import "./App.css";
 
-type Page = "eolrb" | "4c" | "mc4c";
+type Page = "eolrb" | "bld" | "4c" | "mc4c";
 
 const STORAGE_KEY = "trainer-active-page-v1";
 
@@ -32,6 +33,13 @@ function App() {
       </button>
       <button
         type="button"
+        className={`page-tab ${page === "bld" ? "active" : ""}`}
+        onClick={() => setPage("bld")}
+      >
+        EOLRb BLD
+      </button>
+      <button
+        type="button"
         className={`page-tab ${page === "4c" ? "active" : ""}`}
         onClick={() => setPage("4c")}
       >
@@ -50,6 +58,7 @@ function App() {
   return (
     <>
       {page === "eolrb" && <EOLRbTrainer pageTabs={pageTabs} />}
+      {page === "bld" && <EOLRbBLDTrainer pageTabs={pageTabs} />}
       {page === "4c" && (
         <FourCTrainer
           generateCase={generate4cCase}

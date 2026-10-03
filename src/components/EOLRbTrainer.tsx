@@ -1,16 +1,10 @@
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
-import {
-  generateCase,
-  EO_CASES,
-  allCombos,
-  type EOLRbCase,
-  type EOCaseId,
-  type EnabledCombo,
-} from "../lib/EOLRbGenerator";
+import { EO_CASES, type EOLRbCase, type EOCaseId } from "../lib/EOLRbGenerator";
+import { comboKey, ALL_KEYS, caseLabel, restoreEnabled, caseForEnabled } from "../lib/EOLRbCombos";
 import { loadProgress, saveProgress, nextMasteryLevel, masteryLabel, masterySymbol, type ProgressState } from "../lib/Progress";
 import { loadRepCount, saveRepCount } from "../lib/RepCount";
 import { loadNotes, saveNotes, type NotesState } from "../lib/Notes";
-import { loadSelection, saveSelection } from "../lib/Selection";
+import { saveSelection } from "../lib/Selection";
 import { loadSettings, saveSettings, type Settings } from "../lib/Settings";
 import { colorSchemeFor, validFrontsFor, COLOR_LETTERS, COLOR_NAMES, type ColorLetter } from "../lib/ColorScheme";
 import { CubieCube, FaceletCube } from "../lib/CubeLib";
@@ -26,39 +20,6 @@ const HINT_DISTANCE = 3;
 const SOLVED_FACELET = FaceletCube.from_cubie(new CubieCube());
 
 const PAGE_ID = "eolrb";
-
-function comboKey(c: EnabledCombo): string {
-  return `${c.eoCase}::${c.subcase}`;
-}
-
-const ALL_COMBOS = allCombos();
-const ALL_KEYS = ALL_COMBOS.map(comboKey);
-const EO_CASE_BY_ID = new Map(EO_CASES.map((c) => [c.id, c]));
-
-// Human-readable name for the case currently being drilled, e.g.
-// "4/0 · Both on top, opposite".
-function caseLabel(eoCase: EOCaseId, subcase: string): string {
-  const def = EO_CASE_BY_ID.get(eoCase);
-  const sub = def?.subcases.find((s) => s.id === subcase);
-  return sub ? `${def!.label} · ${sub.label}` : eoCase;
-}
-
-function combosForKeys(keys: Set<string>): EnabledCombo[] {
-  return ALL_COMBOS.filter((c) => keys.has(comboKey(c)));
-}
-
-// First visit (nothing saved yet) defaults to everything selected. A saved
-// selection -- even an empty one -- is honored exactly, since "nothing
-// selected" is now a deliberate, supported state.
-function restoreEnabled(): Set<string> {
-  const saved = loadSelection();
-  if (saved === null) return new Set(ALL_KEYS);
-  return new Set(saved.filter((k) => ALL_KEYS.includes(k)));
-}
-
-function caseForEnabled(keys: Set<string>): EOLRbCase | null {
-  return keys.size > 0 ? generateCase(combosForKeys(keys)) : null;
-}
 
 type EOLRbTrainerProps = {
   pageTabs: ReactNode;
