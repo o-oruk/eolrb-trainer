@@ -9,6 +9,7 @@ import { colorSchemeFor, validFrontsFor, COLOR_LETTERS, COLOR_NAMES, type ColorL
 import { FaceletCube } from "../lib/CubeLib";
 import { Face } from "../lib/Defs";
 import CubeSim from "./CubeSim";
+import NoteInput from "./NoteInput";
 import "../App.css";
 
 // Same hidden-face hint convention as the EOLRb trainer -- this is the next
@@ -376,12 +377,10 @@ function FourCTrainer({ generateCase, pageId, namespace, title, subtitle, pageTa
           <div className="notes-bar">
             <span className="notes-bar-label">Note</span>
             {prefs.showNotes ? (
-              <input
-                type="text"
-                className="notes-input"
+              <NoteInput
                 placeholder={`Write a hint for "${currentLabel}"...`}
                 value={currentNote}
-                onChange={(e) => setNoteForCurrent(e.target.value)}
+                onChange={setNoteForCurrent}
               />
             ) : (
               <span className="notes-input-placeholder">hidden</span>

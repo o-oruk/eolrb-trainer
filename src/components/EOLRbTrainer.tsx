@@ -10,6 +10,7 @@ import { colorSchemeFor, validFrontsFor, COLOR_LETTERS, COLOR_NAMES, type ColorL
 import { CubieCube, FaceletCube } from "../lib/CubeLib";
 import { Face } from "../lib/Defs";
 import CubeSim from "./CubeSim";
+import NoteInput from "./NoteInput";
 import "../App.css";
 
 // Onionhoney reveals the hidden L/B/D faces as floating "hint" stickers in
@@ -360,12 +361,10 @@ function EOLRbTrainer({ pageTabs }: EOLRbTrainerProps) {
           <div className="notes-bar">
             <span className="notes-bar-label">Note</span>
             {prefs.showNotes ? (
-              <input
-                type="text"
-                className="notes-input"
+              <NoteInput
                 placeholder={`Write a hint for "${currentLabel}"...`}
                 value={currentNote}
-                onChange={(e) => setNoteForCurrent(e.target.value)}
+                onChange={setNoteForCurrent}
               />
             ) : (
               <span className="notes-input-placeholder">hidden</span>

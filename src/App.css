@@ -596,6 +596,13 @@ main {
   min-width: 0;
   /* ~70% of the bar's old full-length input */
   max-width: 350px;
+  /* A textarea sized by NoteInput: starts one line tall and grows downward
+     as the note wraps, rather than scrolling/cutting text off. */
+  display: block;
+  box-sizing: border-box;
+  line-height: 1.4;
+  resize: none;
+  overflow: hidden;
 }
 
 .notes-input:focus {
