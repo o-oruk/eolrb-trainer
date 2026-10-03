@@ -1199,6 +1199,29 @@ main {
 
 /* --- BLD stats modal --- */
 
+.bld-clear-button {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: 1px solid var(--danger-border);
+  background: var(--danger-bg);
+  color: var(--danger);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.bld-clear-button:hover:not(:disabled) {
+  border-color: var(--danger);
+  background: var(--danger-bg-bright);
+}
+
+.bld-clear-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 .bld-stats-panel {
   max-width: 760px;
 }

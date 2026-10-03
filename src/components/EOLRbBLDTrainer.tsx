@@ -122,8 +122,9 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
   const resetSession = () => setSession({ yes: 0, no: 0 });
 
   const resetStats = () => {
-    if (!window.confirm("Clear all blindfolded stats? This can't be undone.")) return;
+    if (!window.confirm("Clear all blindfolded stats for every case (and the session tally)? This can't be undone.")) return;
     setStats({});
+    setSession({ yes: 0, no: 0 });
     setLastAttempt(null);
   };
 
@@ -529,8 +530,8 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
               })}
             </div>
             <div className="modal-footer progress-footer">
-              <button className="text-button" onClick={resetStats}>
-                Reset stats
+              <button type="button" className="bld-clear-button" onClick={resetStats} disabled={overallAttempts === 0}>
+                Clear all stats
               </button>
               <button className="primary" onClick={() => setStatsOpen(false)}>
                 Done
