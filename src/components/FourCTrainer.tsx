@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { FOUR_C_CATEGORIES, ALL_CASES, allCaseIds, type FourCCase, type FourCCategoryId } from "../lib/FourCGenerator";
-import { loadProgress, saveProgress, nextMasteryLevel, type ProgressState, type MasteryLevel } from "../lib/Progress";
+import { loadProgress, saveProgress, nextMasteryLevel, masteryLabel, masterySymbol, type ProgressState } from "../lib/Progress";
 import { loadRepCount, saveRepCount } from "../lib/RepCount";
 import { loadNotes, saveNotes, type NotesState } from "../lib/Notes";
 import { loadSelection, saveSelection } from "../lib/Selection";
@@ -17,12 +17,6 @@ const HINT_FACES = [Face.L, Face.B, Face.D];
 const HINT_DISTANCE = 3;
 
 const ALL_IDS = allCaseIds();
-
-function levelLabel(level: MasteryLevel | undefined): string {
-  if (level === "mastered") return "Learned";
-  if (level === "learning") return "Still learning";
-  return "Mark progress";
-}
 
 // Both 4c pages (plain 4c and MC-4c) train the same 17 fixed cases with an
 // identical selection/progress/cube UI -- they differ only in how a case's
@@ -224,8 +218,10 @@ function FourCTrainer({ generateCase, pageId, namespace, title, subtitle, pageTa
 
   const masteredCount = ALL_IDS.filter((id) => progress[id] === "mastered").length;
   const learningCount = ALL_IDS.filter((id) => progress[id] === "learning").length;
+  const flaggedCount = ALL_IDS.filter((id) => progress[id] === "flagged").length;
   const masteredPct = Math.round((masteredCount / ALL_IDS.length) * 100);
   const learningPct = Math.round((learningCount / ALL_IDS.length) * 100);
+  const flaggedPct = Math.round((flaggedCount / ALL_IDS.length) * 100);
 
   return (
     <div id="page">
@@ -240,7 +236,7 @@ function FourCTrainer({ generateCase, pageId, namespace, title, subtitle, pageTa
             <span className="chevron">&#9662;</span>
           </button>
           <button className="settings-toggle progress-pill" onClick={() => setProgressOpen(true)}>
-            <span className="progress-pill-dot" style={{ "--pct-m": `${masteredPct}%`, "--pct-l": `${masteredPct + learningPct}%` } as CSSProperties} />
+            <span className="progress-pill-dot" style={{ "--pct-m": `${masteredPct}%`, "--pct-l": `${masteredPct + learningPct}%`, "--pct-f": `${masteredPct + learningPct + flaggedPct}%` } as CSSProperties} />
             Progress: {masteredCount}/{ALL_IDS.length}
             <span className="chevron">&#9662;</span>
           </button>
@@ -362,9 +358,9 @@ function FourCTrainer({ generateCase, pageId, namespace, title, subtitle, pageTa
             onClick={() => cycleMastery(currentKey!)}
           >
             <span className="mastery-check">
-              {currentLevel === "mastered" ? "✓" : currentLevel === "learning" ? "~" : ""}
+              {masterySymbol(currentLevel)}
             </span>
-            <span>{levelLabel(currentLevel)}</span>
+            <span>{masteryLabel(currentLevel)}</span>
           </button>
 
           {!revealed ? (
@@ -432,7 +428,7 @@ function FourCTrainer({ generateCase, pageId, namespace, title, subtitle, pageTa
                             />
                             {level && (
                               <span className="toggle-chip-badge">
-                                {level === "mastered" ? "✓" : "~"}
+                                {masterySymbol(level)}
                               </span>
                             )}
                             <span className="chip-label">{c.label}</span>
@@ -471,9 +467,13 @@ function FourCTrainer({ generateCase, pageId, namespace, title, subtitle, pageTa
                 <div className="progress-bar-track">
                   <div className="progress-bar-fill mastered" style={{ width: `${masteredPct}%` }} />
                   <div className="progress-bar-fill learning" style={{ width: `${learningPct}%` }} />
+                  <div className="progress-bar-fill flagged" style={{ width: `${flaggedPct}%` }} />
                 </div>
                 {learningCount > 0 && (
                   <div className="overall-progress-sub">{learningCount} still in progress</div>
+                )}
+                {flaggedCount > 0 && (
+                  <div className="overall-progress-sub flagged">{flaggedCount} flagged</div>
                 )}
               </div>
 
@@ -481,8 +481,10 @@ function FourCTrainer({ generateCase, pageId, namespace, title, subtitle, pageTa
                 const ids = cat.cases.map((c) => c.id);
                 const caseMastered = ids.filter((id) => progress[id] === "mastered").length;
                 const caseLearning = ids.filter((id) => progress[id] === "learning").length;
+                const caseFlagged = ids.filter((id) => progress[id] === "flagged").length;
                 const caseMasteredPct = Math.round((caseMastered / ids.length) * 100);
                 const caseLearningPct = Math.round((caseLearning / ids.length) * 100);
+                const caseFlaggedPct = Math.round((caseFlagged / ids.length) * 100);
                 return (
                   <div key={cat.id} className="eo-case-group">
                     <div className="eo-case-header progress-header">
@@ -494,6 +496,7 @@ function FourCTrainer({ generateCase, pageId, namespace, title, subtitle, pageTa
                     <div className="mini-bar-track">
                       <div className="mini-bar-fill mastered" style={{ width: `${caseMasteredPct}%` }} />
                       <div className="mini-bar-fill learning" style={{ width: `${caseLearningPct}%` }} />
+                      <div className="mini-bar-fill flagged" style={{ width: `${caseFlaggedPct}%` }} />
                     </div>
                     <div className="checklist">
                       {cat.cases.map((c) => {
@@ -506,7 +509,7 @@ function FourCTrainer({ generateCase, pageId, namespace, title, subtitle, pageTa
                             onClick={() => cycleMastery(c.id)}
                           >
                             <span className="checklist-check">
-                              {level === "mastered" ? "✓" : level === "learning" ? "~" : ""}
+                              {masterySymbol(level)}
                             </span>
                             <span className="checklist-label">{c.label}</span>
                           </button>

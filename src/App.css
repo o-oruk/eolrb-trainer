@@ -154,13 +154,15 @@ header h1 {
 .progress-pill-dot {
   --pct-m: 0%;
   --pct-l: 0%;
+  --pct-f: 0%;
   width: 14px;
   height: 14px;
   border-radius: 50%;
   background: conic-gradient(
     var(--success) var(--pct-m),
     var(--warning) var(--pct-m) var(--pct-l),
-    var(--border) var(--pct-l)
+    var(--danger) var(--pct-l) var(--pct-f),
+    var(--border) var(--pct-f)
   );
   flex-shrink: 0;
 }
@@ -299,6 +301,10 @@ header h1 {
   border-color: var(--warning-border);
 }
 
+.toggle-chip.level-flagged:not(.on):hover {
+  border-color: var(--danger-border);
+}
+
 /*
  * Two consistent intensity tiers, independent of hue: "muted" for
  * unselected chips (same visual weight whether plain gray, green, or
@@ -326,9 +332,19 @@ header h1 {
   background: var(--warning-bg-muted);
 }
 
+.toggle-chip.level-flagged:not(.on) {
+  border-color: var(--danger-border-muted);
+  background: var(--danger-bg-muted);
+}
+
 .toggle-chip.level-learning.on {
   border-color: var(--warning);
   background: var(--warning-bg-bright);
+}
+
+.toggle-chip.level-flagged.on {
+  border-color: var(--danger);
+  background: var(--danger-bg-bright);
 }
 
 .toggle-chip-badge {
@@ -350,6 +366,10 @@ header h1 {
 
 .toggle-chip.level-learning .toggle-chip-badge {
   background: var(--warning);
+}
+
+.toggle-chip.level-flagged .toggle-chip-badge {
+  background: var(--danger);
 }
 
 .toggle-chip input {
@@ -639,7 +659,7 @@ main {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  /* Fixed width so "Mark progress" / "Still learning" / "Learned" render at
+  /* Fixed width so "Mark progress" / "Still learning" / "Learned" / "Flagged" render at
      the same size instead of the button resizing with its label. */
   width: 180px;
   padding: 10px 14px;
@@ -670,6 +690,12 @@ main {
   color: var(--warning);
 }
 
+.mastery-toggle.level-flagged {
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
 .mastery-check {
   display: inline-flex;
   align-items: center;
@@ -694,6 +720,13 @@ main {
 .mastery-toggle.level-learning .mastery-check {
   border-color: var(--warning);
   background: var(--warning);
+  color: white;
+  transform: scale(1.1);
+}
+
+.mastery-toggle.level-flagged .mastery-check {
+  border-color: var(--danger);
+  background: var(--danger);
   color: white;
   transform: scale(1.1);
 }
@@ -816,12 +849,21 @@ main {
   background: var(--warning);
 }
 
+.progress-bar-fill.flagged {
+  background: var(--danger);
+}
+
 .overall-progress-sub {
   margin-top: 6px;
   font-size: 12px;
   color: var(--warning);
   text-align: center;
   font-weight: 600;
+}
+
+.overall-progress-sub.flagged {
+  margin-top: 2px;
+  color: var(--danger);
 }
 
 
@@ -865,6 +907,10 @@ main {
   background: var(--warning);
 }
 
+.mini-bar-fill.flagged {
+  background: var(--danger);
+}
+
 .checklist {
   display: flex;
   flex-direction: column;
@@ -901,6 +947,11 @@ main {
   border-color: var(--warning-border);
 }
 
+.checklist-item.level-flagged {
+  background: var(--danger-bg);
+  border-color: var(--danger-border);
+}
+
 .checklist-check {
   display: inline-flex;
   align-items: center;
@@ -925,6 +976,13 @@ main {
 .checklist-item.level-learning .checklist-check {
   border-color: var(--warning);
   background: var(--warning);
+  color: white;
+  transform: scale(1.1);
+}
+
+.checklist-item.level-flagged .checklist-check {
+  border-color: var(--danger);
+  background: var(--danger);
   color: white;
   transform: scale(1.1);
 }

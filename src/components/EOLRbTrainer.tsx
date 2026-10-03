@@ -7,7 +7,7 @@ import {
   type EOCaseId,
   type EnabledCombo,
 } from "../lib/EOLRbGenerator";
-import { loadProgress, saveProgress, nextMasteryLevel, type ProgressState, type MasteryLevel } from "../lib/Progress";
+import { loadProgress, saveProgress, nextMasteryLevel, masteryLabel, masterySymbol, type ProgressState } from "../lib/Progress";
 import { loadRepCount, saveRepCount } from "../lib/RepCount";
 import { loadNotes, saveNotes, type NotesState } from "../lib/Notes";
 import { loadSelection, saveSelection } from "../lib/Selection";
@@ -58,12 +58,6 @@ function restoreEnabled(): Set<string> {
 
 function caseForEnabled(keys: Set<string>): EOLRbCase | null {
   return keys.size > 0 ? generateCase(combosForKeys(keys)) : null;
-}
-
-function levelLabel(level: MasteryLevel | undefined): string {
-  if (level === "mastered") return "Learned";
-  if (level === "learning") return "Still learning";
-  return "Mark progress";
 }
 
 type EOLRbTrainerProps = {
@@ -247,8 +241,10 @@ function EOLRbTrainer({ pageTabs }: EOLRbTrainerProps) {
   };
   const masteredCount = ALL_KEYS.filter((k) => progress[k] === "mastered").length;
   const learningCount = ALL_KEYS.filter((k) => progress[k] === "learning").length;
+  const flaggedCount = ALL_KEYS.filter((k) => progress[k] === "flagged").length;
   const masteredPct = Math.round((masteredCount / ALL_KEYS.length) * 100);
   const learningPct = Math.round((learningCount / ALL_KEYS.length) * 100);
+  const flaggedPct = Math.round((flaggedCount / ALL_KEYS.length) * 100);
 
   return (
     <div id="page">
@@ -263,7 +259,7 @@ function EOLRbTrainer({ pageTabs }: EOLRbTrainerProps) {
             <span className="chevron">&#9662;</span>
           </button>
           <button className="settings-toggle progress-pill" onClick={() => setProgressOpen(true)}>
-            <span className="progress-pill-dot" style={{ "--pct-m": `${masteredPct}%`, "--pct-l": `${masteredPct + learningPct}%` } as CSSProperties} />
+            <span className="progress-pill-dot" style={{ "--pct-m": `${masteredPct}%`, "--pct-l": `${masteredPct + learningPct}%`, "--pct-f": `${masteredPct + learningPct + flaggedPct}%` } as CSSProperties} />
             Progress: {masteredCount}/{ALL_KEYS.length}
             <span className="chevron">&#9662;</span>
           </button>
@@ -385,9 +381,9 @@ function EOLRbTrainer({ pageTabs }: EOLRbTrainerProps) {
             onClick={() => cycleMastery(currentKey!)}
           >
             <span className="mastery-check">
-              {currentLevel === "mastered" ? "✓" : currentLevel === "learning" ? "~" : ""}
+              {masterySymbol(currentLevel)}
             </span>
-            <span>{levelLabel(currentLevel)}</span>
+            <span>{masteryLabel(currentLevel)}</span>
           </button>
 
           {!revealed ? (
@@ -456,7 +452,7 @@ function EOLRbTrainer({ pageTabs }: EOLRbTrainerProps) {
                             />
                             {level && (
                               <span className="toggle-chip-badge">
-                                {level === "mastered" ? "✓" : "~"}
+                                {masterySymbol(level)}
                               </span>
                             )}
                             <span className="chip-label">{s.label}</span>
@@ -495,9 +491,13 @@ function EOLRbTrainer({ pageTabs }: EOLRbTrainerProps) {
                 <div className="progress-bar-track">
                   <div className="progress-bar-fill mastered" style={{ width: `${masteredPct}%` }} />
                   <div className="progress-bar-fill learning" style={{ width: `${learningPct}%` }} />
+                  <div className="progress-bar-fill flagged" style={{ width: `${flaggedPct}%` }} />
                 </div>
                 {learningCount > 0 && (
                   <div className="overall-progress-sub">{learningCount} still in progress</div>
+                )}
+                {flaggedCount > 0 && (
+                  <div className="overall-progress-sub flagged">{flaggedCount} flagged</div>
                 )}
               </div>
 
@@ -505,8 +505,10 @@ function EOLRbTrainer({ pageTabs }: EOLRbTrainerProps) {
                 const keys = c.subcases.map((s) => comboKey({ eoCase: c.id, subcase: s.id }));
                 const caseMastered = keys.filter((k) => progress[k] === "mastered").length;
                 const caseLearning = keys.filter((k) => progress[k] === "learning").length;
+                const caseFlagged = keys.filter((k) => progress[k] === "flagged").length;
                 const caseMasteredPct = Math.round((caseMastered / keys.length) * 100);
                 const caseLearningPct = Math.round((caseLearning / keys.length) * 100);
+                const caseFlaggedPct = Math.round((caseFlagged / keys.length) * 100);
                 return (
                   <div key={c.id} className="eo-case-group">
                     <div className="eo-case-header progress-header">
@@ -518,6 +520,7 @@ function EOLRbTrainer({ pageTabs }: EOLRbTrainerProps) {
                     <div className="mini-bar-track">
                       <div className="mini-bar-fill mastered" style={{ width: `${caseMasteredPct}%` }} />
                       <div className="mini-bar-fill learning" style={{ width: `${caseLearningPct}%` }} />
+                      <div className="mini-bar-fill flagged" style={{ width: `${caseFlaggedPct}%` }} />
                     </div>
                     <div className="checklist">
                       {c.subcases.map((s) => {
@@ -531,7 +534,7 @@ function EOLRbTrainer({ pageTabs }: EOLRbTrainerProps) {
                             onClick={() => cycleMastery(key)}
                           >
                             <span className="checklist-check">
-                              {level === "mastered" ? "✓" : level === "learning" ? "~" : ""}
+                              {masterySymbol(level)}
                             </span>
                             <span className="checklist-label">{s.label}</span>
                           </button>
