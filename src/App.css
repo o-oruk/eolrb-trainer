@@ -95,6 +95,71 @@ header h1 {
   color: var(--text-h);
 }
 
+/* Fixed-width pill slots so the header row has exactly the same shape on
+   every trainer page -- otherwise e.g. "17/17" vs "56/56" or the BLD
+   session tally vs "Reps" shifts the centered row when switching pages. */
+.header-actions .settings-toggle {
+  justify-content: center;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.pill-cases {
+  width: 176px;
+}
+
+.header-actions .progress-pill {
+  width: 152px;
+}
+
+.pill-cube {
+  width: 92px;
+}
+
+.header-actions .rep-pill {
+  width: 196px;
+  min-width: max-content;
+}
+
+.data-actions {
+  position: fixed;
+  top: 12px;
+  right: 16px;
+  display: flex;
+  gap: 6px;
+  z-index: 5;
+}
+
+.data-btn {
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.data-btn:hover {
+  border-color: var(--accent-border);
+  color: var(--text-h);
+}
+
+/* Too narrow for a corner overlay without covering the title: sit in normal
+   flow above the page instead (still identical on every page). */
+@media (max-width: 1000px) {
+  .data-actions {
+    position: static;
+    justify-content: center;
+    padding-top: 12px;
+  }
+}
+
 .settings-toggle .chevron {
   font-size: 10px;
   opacity: 0.7;

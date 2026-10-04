@@ -42,7 +42,6 @@ function App() {
   // own -- see conversation: the page switcher, the title, and the
   // settings/progress/cube/reps pills used to each claim a full row.
   const pageTabs = (
-    <>
     <div className="tab-group">
       <button
         type="button"
@@ -73,21 +72,25 @@ function App() {
         MC-4c
       </button>
     </div>
-    <div className="tab-divider" />
-    <div className="tab-group">
-      <button type="button" className="page-tab" onClick={exportBackup} title="Download all progress, stats, notes and settings as a file">
+  );
+
+  // Fixed in the page corner (not in the header row) so it never changes the
+  // row's shape -- the row must look identical on every trainer page.
+  const dataActions = (
+    <div className="data-actions">
+      <button type="button" className="data-btn" onClick={exportBackup} title="Download all progress, stats, notes and settings as a file">
         Export data
       </button>
-      <button type="button" className="page-tab" onClick={() => importInput.current?.click()} title="Load a previously exported data file">
+      <button type="button" className="data-btn" onClick={() => importInput.current?.click()} title="Load a previously exported data file">
         Import data
       </button>
       <input ref={importInput} type="file" accept="application/json,.json" hidden onChange={onImportFile} />
     </div>
-    </>
   );
 
   return (
     <>
+      {dataActions}
       {page === "eolrb" && <EOLRbTrainer pageTabs={pageTabs} />}
       {page === "bld" && <EOLRbBLDTrainer pageTabs={pageTabs} />}
       {page === "4c" && (

@@ -216,7 +216,7 @@ function EOLRbTrainer({ pageTabs }: EOLRbTrainerProps) {
         <div className="header-actions">
           {pageTabs}
           <div className="tab-divider" />
-          <button className="settings-toggle" onClick={() => setSettingsOpen(true)}>
+          <button className="settings-toggle pill-cases" onClick={() => setSettingsOpen(true)}>
             Cases: {enabled.size}/{ALL_KEYS.length} selected
             <span className="chevron">&#9662;</span>
           </button>
@@ -225,7 +225,7 @@ function EOLRbTrainer({ pageTabs }: EOLRbTrainerProps) {
             Progress: {masteredCount}/{ALL_KEYS.length}
             <span className="chevron">&#9662;</span>
           </button>
-          <button className="settings-toggle" onClick={toggleShowCube}>
+          <button className="settings-toggle pill-cube" onClick={toggleShowCube}>
             {prefs.showCube ? "Hide cube" : "Show cube"}
           </button>
           <div className="rep-counter">
