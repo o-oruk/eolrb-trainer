@@ -295,6 +295,62 @@ const ONE_ONE_SUBCASES: BLDSubcaseDef[] = [
     })),
 ];
 
+// Arrow: tip and sides misoriented, back oriented; bottom one misoriented,
+// one oriented. The tip is the slot opposite the lone oriented top slot.
+const arrowBack = (cube: CubieCube) => TOP_SLOTS.find((s) => cube.eo[s] === 0);
+const arrowTip = (cube: CubieCube) => {
+    const back = arrowBack(cube);
+    return back === undefined ? undefined : oppositeTop(back);
+};
+
+// Relation of the LR edge in a top slot picked by `slotOf`.
+const byLRSlot = (
+    parent: string,
+    group: string,
+    what: string,
+    order: readonly CornerRelation[],
+    slotOf: (cube: CubieCube) => number | undefined
+): BLDSubcaseDef[] =>
+    order.map((rel) => ({
+        id: `${parent}::${rel}`,
+        parent,
+        group,
+        label: `${what} between ${REL_WORD[rel]}`,
+        fullLabel: `${group} · ${what.toLowerCase()} LR edge between ${REL_WORD[rel]} colored corners`,
+        accept: (cube: CubieCube) => {
+            const slot = slotOf(cube);
+            return slot !== undefined && LR_PIECES.has(cube.ep[slot]) && edgeCornerRelation(cube, slot) === rel;
+        },
+    }));
+
+const ARROW_SUBCASES: BLDSubcaseDef[] = [
+    // Both LR edges on the bottom: the tip edge's corners, compared with the
+    // color of the LR edge in the oriented bottom slot.
+    ...(["matching", "opposite", "adjacent"] as const).map((rel) => ({
+        id: `both-bottom::${rel}`,
+        parent: "both-bottom",
+        group: "2 on bottom",
+        label: `Tip between ${rel === "matching" ? "same" : rel}-color corners vs bottom-oriented LR`,
+        fullLabel: `2 on bottom · tip of arrow between corners ${rel === "matching" ? "the same color as" : `${rel} to`} the oriented LR edge in bottom`,
+        accept: (cube: CubieCube) => {
+            const tip = arrowTip(cube);
+            const bottom = BOTTOM_SLOTS.find((s) => cube.eo[s] === 0);
+            if (tip === undefined || bottom === undefined) return false;
+            return relationToColor(cube, tip, cube.ep[bottom] === UL) === rel;
+        },
+    })),
+    ...oneTop("bottom-misoriented-top-tip", "1 bottom (misoriented), 1 top (tip)", "top LR edge"),
+    ...oneTop("bottom-misoriented-top-side", "1 bottom (misoriented), 1 top (side of arrow)", "top LR edge"),
+    ...oneTop("bottom-misoriented-top-back", "1 bottom (misoriented), 1 top (back of arrow)", "top LR edge"),
+    ...oneTop("bottom-oriented-top-tip", "1 bottom (oriented), 1 top (tip)", "top LR edge"),
+    ...oneTop("bottom-oriented-top-side", "1 bottom (oriented), 1 top (side of arrow)", "top LR edge"),
+    ...oneTop("bottom-oriented-top-back", "1 bottom (oriented), 1 top (back of arrow)", "top LR edge"),
+    ...byLRSlot("top-tip-side", "2 on top (tip + side, adjacent)", "Tip", THREE_RELS, arrowTip),
+    ...twoTopOpposite("top-sides", "2 on top (both on sides of arrow)", "both LR edges", ["matching", "adjacent", "opposite"]),
+    ...byLRSlot("top-tip-back", "2 on top (one tip, one back of arrow)", "Tip", THREE_RELS, arrowTip),
+    ...byLRSlot("top-side-back", "2 on top (one side, one back of arrow)", "Back", THREE_RELS, arrowBack),
+];
+
 const REFINEMENTS: Partial<Record<EOCaseId, BLDSubcaseDef[]>> = {
     "4/0": FOUR_ZERO_SUBCASES,
     "0/2": FOUR_ZERO_SUBCASES,
@@ -303,6 +359,7 @@ const REFINEMENTS: Partial<Record<EOCaseId, BLDSubcaseDef[]>> = {
     "2a/2": TWO_A_SUBCASES,
     "2o/2": TWO_O_TWO_SUBCASES,
     "1/1": ONE_ONE_SUBCASES,
+    arrow: ARROW_SUBCASES,
 };
 
 export const BLD_CASES: BLDCaseDef[] = EO_CASES.map((c) => ({
