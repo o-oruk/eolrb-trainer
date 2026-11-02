@@ -77,48 +77,7 @@ function refined(
 }
 
 const REL_WORD: Record<CornerRelation, string> = { opposite: "opposite", matching: "matching", adjacent: "adjacent" };
-
-// 4/0 and 0/2 (same shape): bottom/top placement, then
-// corner colors around the top LR edge(s).
-//  - 1 top: that edge's relation, any of the three.
-//  - 2 top opposite: both edges always share a relation (both sit between
-//    same-colored corners -- matching or both swapped/opposite -- or both
-//    between mixed corners), so the three options cover it.
-//  - 2 top adjacent: one edge is always between mixed corners; the other is
-//    between matching or opposite ones, which is what tells the cases apart.
-const FOUR_ZERO_SUBCASES: BLDSubcaseDef[] = [
-    { id: "both-bottom", parent: "both-bottom", label: "2 on bottom", fullLabel: "2 on bottom", accept: always },
-    ...refined(
-        "one-top-one-bottom",
-        "1 on bottom, 1 on top",
-        (["opposite", "matching", "adjacent"] as const).map((rel) => ({
-            rel,
-            label: `Between ${REL_WORD[rel]}`,
-            fullLabel: `top edge between ${REL_WORD[rel]} colored corners`,
-            accept: (rels) => rels.length === 1 && rels[0] === rel,
-        }))
-    ),
-    ...refined(
-        "top-opposite",
-        "2 on top (opposite)",
-        (["opposite", "matching", "adjacent"] as const).map((rel) => ({
-            rel,
-            label: `Between ${REL_WORD[rel]}`,
-            fullLabel: `edges between ${REL_WORD[rel]} colored corners`,
-            accept: (rels) => rels.length === 2 && rels.every((r) => r === rel),
-        }))
-    ),
-    ...refined(
-        "top-adjacent",
-        "2 on top (adjacent)",
-        (["opposite", "matching"] as const).map((rel) => ({
-            rel,
-            label: `One between ${REL_WORD[rel]}`,
-            fullLabel: `one edge between ${REL_WORD[rel]} colored corners`,
-            accept: (rels) => rels.length === 2 && rels.includes(rel),
-        }))
-    ),
-];
+const THREE_RELS = ["opposite", "matching", "adjacent"] as const;
 
 // Top slots holding an LR edge with the given orientation (eo is per slot:
 // 1 = misoriented).
@@ -126,62 +85,105 @@ function topLRSlots(cube: CubieCube, misoriented: boolean): number[] {
     return TOP_SLOTS.filter((s) => LR_PIECES.has(cube.ep[s]) && (cube.eo[s] === 1) === misoriented);
 }
 
-const THREE_RELS = ["opposite", "matching", "adjacent"] as const;
+// Building blocks, one per placement shape of the LR edges:
 
-// 2o/0: misoriented UF/UB, oriented UL/UR.
-//  - 2 on bottom: a single case, no split.
-//  - 1 bottom + 1 top / 2 top same-orientation: as 4/0.
-//  - 2 top mixed (always an adjacent pair): the oriented edge's relation;
-//    the misoriented one is then determined.
-const TWO_O_ZERO_SUBCASES: BLDSubcaseDef[] = [
-    { id: "both-bottom", parent: "both-bottom", label: "2 on bottom", fullLabel: "2 on bottom", accept: always },
-    ...([
-        ["bottom-top-misoriented", "1 on bottom, 1 on top (misoriented)"],
-        ["bottom-top-oriented", "1 on bottom, 1 on top (oriented)"],
-    ] as const).flatMap(([parent, group]) =>
-        refined(
-            parent,
-            group,
-            THREE_RELS.map((rel) => ({
-                rel,
-                label: `Between ${REL_WORD[rel]}`,
-                fullLabel: `top LR edge between ${REL_WORD[rel]} colored corners`,
-                accept: (rels) => rels.length === 1 && rels[0] === rel,
-            }))
-        )
-    ),
-    ...([
-        ["top-both-misoriented", "2 on top (both misoriented)"],
-        ["top-both-oriented", "2 on top (both oriented)"],
-    ] as const).flatMap(([parent, group]) =>
-        refined(
-            parent,
-            group,
-            THREE_RELS.map((rel) => ({
-                rel,
-                label: `Between ${REL_WORD[rel]}`,
-                fullLabel: `top edges between ${REL_WORD[rel]} colored corners`,
-                accept: (rels) => rels.length === 2 && rels.every((r) => r === rel),
-            }))
-        )
-    ),
-    ...(["matching", "opposite", "adjacent"] as const).map((rel) => ({
-        id: `top-mixed::${rel}`,
-        parent: "top-mixed",
-        group: "2 on top (1 oriented, 1 misoriented)",
-        label: `Oriented between ${REL_WORD[rel]}`,
-        fullLabel: `2 on top (1 oriented, 1 misoriented) · oriented edge between ${REL_WORD[rel]} colored corners`,
+const unsplit = (id: string, label: string): BLDSubcaseDef => ({ id, parent: id, label, fullLabel: label, accept: always });
+
+// 1 LR edge on top: its relation, any of the three.
+const oneTop = (parent: string, group: string, edge = "top edge") =>
+    refined(
+        parent,
+        group,
+        THREE_RELS.map((rel) => ({
+            rel,
+            label: `Between ${REL_WORD[rel]}`,
+            fullLabel: `${edge} between ${REL_WORD[rel]} colored corners`,
+            accept: (rels) => rels.length === 1 && rels[0] === rel,
+        }))
+    );
+
+// 2 LR edges on top, opposite each other: both edges always share a relation
+// (both between same-colored corners -- matching, or both swapped/opposite --
+// or both between mixed corners), so the three options cover it.
+const twoTopOpposite = (parent: string, group: string, edges = "edges") =>
+    refined(
+        parent,
+        group,
+        THREE_RELS.map((rel) => ({
+            rel,
+            label: `Between ${REL_WORD[rel]}`,
+            fullLabel: `${edges} between ${REL_WORD[rel]} colored corners`,
+            accept: (rels) => rels.length === 2 && rels.every((r) => r === rel),
+        }))
+    );
+
+// 2 LR edges on top, adjacent: one edge is always between mixed corners; the
+// other is between matching or opposite ones, which tells the cases apart.
+const twoTopAdjacent = (parent: string, group: string, edge = "edge") =>
+    refined(
+        parent,
+        group,
+        (["opposite", "matching"] as const).map((rel) => ({
+            rel,
+            label: `One between ${REL_WORD[rel]}`,
+            fullLabel: `one ${edge} between ${REL_WORD[rel]} colored corners`,
+            accept: (rels) => rels.length === 2 && rels.includes(rel),
+        }))
+    );
+
+// 2 LR edges on top, one oriented and one misoriented: the relation of the
+// named one (all three are possible whether the pair is adjacent or
+// opposite).
+const twoTopMixed = (parent: string, group: string, by: "oriented" | "misoriented"): BLDSubcaseDef[] =>
+    (["matching", "opposite", "adjacent"] as const).map((rel) => ({
+        id: `${parent}::${rel}`,
+        parent,
+        group,
+        label: `${by === "oriented" ? "Oriented" : "Misoriented"} between ${REL_WORD[rel]}`,
+        fullLabel: `${group} · ${by} LR edge between ${REL_WORD[rel]} colored corners`,
         accept: (cube: CubieCube) => {
-            const [o] = topLRSlots(cube, false);
-            return o !== undefined && edgeCornerRelation(cube, o) === rel;
+            const [slot] = topLRSlots(cube, by === "misoriented");
+            return slot !== undefined && edgeCornerRelation(cube, slot) === rel;
         },
-    })),
+    }));
+
+// 4/0 and 0/2 (same shape).
+const FOUR_ZERO_SUBCASES: BLDSubcaseDef[] = [
+    unsplit("both-bottom", "2 on bottom"),
+    ...oneTop("one-top-one-bottom", "1 on bottom, 1 on top"),
+    ...twoTopOpposite("top-opposite", "2 on top (opposite)"),
+    ...twoTopAdjacent("top-adjacent", "2 on top (adjacent)"),
+];
+
+// 2o/0: misoriented UF/UB, oriented UL/UR -- same-orientation top pairs are
+// opposite pairs, the mixed pair is always adjacent.
+const TWO_O_ZERO_SUBCASES: BLDSubcaseDef[] = [
+    unsplit("both-bottom", "2 on bottom"),
+    ...oneTop("bottom-top-misoriented", "1 on bottom, 1 on top (misoriented)", "top LR edge"),
+    ...oneTop("bottom-top-oriented", "1 on bottom, 1 on top (oriented)", "top LR edge"),
+    ...twoTopOpposite("top-both-misoriented", "2 on top (both misoriented)", "top edges"),
+    ...twoTopOpposite("top-both-oriented", "2 on top (both oriented)", "top edges"),
+    ...twoTopMixed("top-mixed", "2 on top (1 oriented, 1 misoriented)", "oriented"),
+];
+
+// 2a/0: misoriented UF/UR, oriented UL/UB -- same-orientation top pairs are
+// adjacent pairs, and a mixed pair can be opposite or adjacent (two sighted
+// subcases, each split by the misoriented edge's relation).
+const TWO_A_ZERO_SUBCASES: BLDSubcaseDef[] = [
+    unsplit("both-bottom", "2 on bottom"),
+    ...oneTop("bottom-top-misoriented", "1 on bottom, 1 on top (misoriented)", "top LR edge"),
+    ...oneTop("bottom-top-oriented", "1 on bottom, 1 on top (oriented)", "top LR edge"),
+    ...twoTopAdjacent("top-both-misoriented", "2 on top (both misoriented)", "LR edge"),
+    ...twoTopAdjacent("top-both-oriented", "2 on top (both oriented)", "LR edge"),
+    ...twoTopMixed("top-mixed-opposite", "2 on top (1 oriented, 1 misoriented, opposite)", "misoriented"),
+    ...twoTopMixed("top-mixed-adjacent", "2 on top (1 oriented, 1 misoriented, adjacent)", "misoriented"),
 ];
 
 const REFINEMENTS: Partial<Record<EOCaseId, BLDSubcaseDef[]>> = {
     "4/0": FOUR_ZERO_SUBCASES,
     "0/2": FOUR_ZERO_SUBCASES,
     "2o/0": TWO_O_ZERO_SUBCASES,
+    "2a/0": TWO_A_ZERO_SUBCASES,
 };
 
 export const BLD_CASES: BLDCaseDef[] = EO_CASES.map((c) => ({
