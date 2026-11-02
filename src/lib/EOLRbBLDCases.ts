@@ -78,7 +78,7 @@ function refined(
 
 const REL_WORD: Record<CornerRelation, string> = { opposite: "opposite", matching: "matching", adjacent: "adjacent" };
 
-// 4/0 (also the shape of 0/2, once wanted there): bottom/top placement, then
+// 4/0 and 0/2 (same shape): bottom/top placement, then
 // corner colors around the top LR edge(s).
 //  - 1 top: that edge's relation, any of the three.
 //  - 2 top opposite: both edges always share a relation (both sit between
@@ -122,6 +122,7 @@ const FOUR_ZERO_SUBCASES: BLDSubcaseDef[] = [
 
 const REFINEMENTS: Partial<Record<EOCaseId, BLDSubcaseDef[]>> = {
     "4/0": FOUR_ZERO_SUBCASES,
+    "0/2": FOUR_ZERO_SUBCASES,
 };
 
 export const BLD_CASES: BLDCaseDef[] = EO_CASES.map((c) => ({
