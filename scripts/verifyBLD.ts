@@ -28,7 +28,7 @@ const fb = withEp([1, 0, 3, 2, 4, 5, 6, 7, 8, 9, 10, 11]);
 check(edgeCornerRelation(fb, UF) === "adjacent" && edgeCornerRelation(fb, UB) === "adjacent", "LR at UF/UB adjacent");
 check(edgeCornerRelation(new CubieCube(), UL) === "matching", "solved UL matching");
 
-const REFINED = ["4/0", "0/2", "2o/0", "2a/0"] as const;
+const REFINED = ["4/0", "0/2", "2o/0", "2a/0", "2a/2"] as const;
 for (const id of REFINED) {
     const def = BLD_CASES.find((x) => x.id === id)!;
     for (const s of def.subcases) {

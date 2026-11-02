@@ -166,24 +166,26 @@ const TWO_O_ZERO_SUBCASES: BLDSubcaseDef[] = [
     ...twoTopMixed("top-mixed", "2 on top (1 oriented, 1 misoriented)", "oriented"),
 ];
 
-// 2a/0: misoriented UF/UR, oriented UL/UB -- same-orientation top pairs are
-// adjacent pairs, and a mixed pair can be opposite or adjacent (two sighted
-// subcases, each split by the misoriented edge's relation).
-const TWO_A_ZERO_SUBCASES: BLDSubcaseDef[] = [
+// 2a/0 (misoriented UF/UR, oriented UL/UB) and 2a/2 (same top, both bottom
+// slots misoriented): same-orientation top pairs are adjacent pairs, and a
+// mixed pair can be adjacent or opposite (two sighted subcases, each split
+// by the misoriented edge's relation).
+const TWO_A_SUBCASES: BLDSubcaseDef[] = [
     unsplit("both-bottom", "2 on bottom"),
     ...oneTop("bottom-top-misoriented", "1 on bottom, 1 on top (misoriented)", "top LR edge"),
     ...oneTop("bottom-top-oriented", "1 on bottom, 1 on top (oriented)", "top LR edge"),
     ...twoTopAdjacent("top-both-misoriented", "2 on top (both misoriented)", "LR edge"),
     ...twoTopAdjacent("top-both-oriented", "2 on top (both oriented)", "LR edge"),
-    ...twoTopMixed("top-mixed-opposite", "2 on top (1 oriented, 1 misoriented, opposite)", "misoriented"),
-    ...twoTopMixed("top-mixed-adjacent", "2 on top (1 oriented, 1 misoriented, adjacent)", "misoriented"),
+    ...twoTopMixed("top-mixed-adjacent", "2 on top adjacent (1 oriented, 1 misoriented)", "misoriented"),
+    ...twoTopMixed("top-mixed-opposite", "2 on top opposite (1 oriented, 1 misoriented)", "misoriented"),
 ];
 
 const REFINEMENTS: Partial<Record<EOCaseId, BLDSubcaseDef[]>> = {
     "4/0": FOUR_ZERO_SUBCASES,
     "0/2": FOUR_ZERO_SUBCASES,
     "2o/0": TWO_O_ZERO_SUBCASES,
-    "2a/0": TWO_A_ZERO_SUBCASES,
+    "2a/0": TWO_A_SUBCASES,
+    "2a/2": TWO_A_SUBCASES,
 };
 
 export const BLD_CASES: BLDCaseDef[] = EO_CASES.map((c) => ({
