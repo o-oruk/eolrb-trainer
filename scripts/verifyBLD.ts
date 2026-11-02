@@ -27,18 +27,21 @@ const fb = withEp([1, 0, 3, 2, 4, 5, 6, 7, 8, 9, 10, 11]);
 check(edgeCornerRelation(fb, UF) === "adjacent" && edgeCornerRelation(fb, UB) === "adjacent", "LR at UF/UB adjacent");
 check(edgeCornerRelation(new CubieCube(), UL) === "matching", "solved UL matching");
 
-const fourZero = BLD_CASES.find((x) => x.id === "4/0")!;
-for (const s of fourZero.subcases) {
-    for (let i = 0; i < 60; i++) check(s.accept(buildBLDCube("4/0", s.id)), `built ${s.id}`);
-    for (let i = 0; i < 8; i++) {
-        const k = generateBLDCase([{ eoCase: "4/0", subcase: s.id }]);
-        const ok = s.accept(k.cube) && s.accept(new CubieCube().apply(k.scramble));
-        check(ok, `scrambled ${s.id}: ${k.scramble} rels=${topLRRelations(k.cube)}`);
+const REFINED = ["4/0", "0/2"] as const;
+for (const id of REFINED) {
+    const def = BLD_CASES.find((x) => x.id === id)!;
+    for (const s of def.subcases) {
+        for (let i = 0; i < 60; i++) check(s.accept(buildBLDCube(id, s.id)), `built ${id} ${s.id}`);
+        for (let i = 0; i < 8; i++) {
+            const k = generateBLDCase([{ eoCase: id, subcase: s.id }]);
+            const ok = s.accept(k.cube) && s.accept(new CubieCube().apply(k.scramble));
+            check(ok, `scrambled ${id} ${s.id}: ${k.scramble} rels=${topLRRelations(k.cube)}`);
+        }
+        console.log("ok", id, s.id);
     }
-    console.log("ok", s.id);
 }
 // Unrefined EO cases still generate.
-for (const e of BLD_CASES.filter((x) => x.id !== "4/0")) {
+for (const e of BLD_CASES.filter((x) => !(REFINED as readonly string[]).includes(x.id))) {
     for (const s of e.subcases) generateBLDCase([{ eoCase: e.id, subcase: s.id }]);
 }
 console.log(failures ? `${failures} failures` : "all passed");
