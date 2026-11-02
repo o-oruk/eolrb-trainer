@@ -120,9 +120,92 @@ const FOUR_ZERO_SUBCASES: BLDSubcaseDef[] = [
     ),
 ];
 
+// Top slots holding an LR edge with the given orientation (eo is per slot:
+// 1 = misoriented).
+function topLRSlots(cube: CubieCube, misoriented: boolean): number[] {
+    return TOP_SLOTS.filter((s) => LR_PIECES.has(cube.ep[s]) && (cube.eo[s] === 1) === misoriented);
+}
+
+// Whether a top slot sits between two corners of the same L/R color.
+function betweenSameColored(cube: CubieCube, slot: number): boolean {
+    const [a, b] = CORNERS_AROUND[slot].map((c) => L_COLORED_CORNERS.has(cube.cp[c]));
+    return a === b;
+}
+
+const THREE_RELS = ["opposite", "matching", "adjacent"] as const;
+
+// 2o/0: misoriented UF/UB, oriented UL/UR.
+//  - 2 on bottom: the top misoriented pair is an opposite pair, so both
+//    edges are either between same-colored corners (one between the two L
+//    corners, the other between the two R corners) or both between one of
+//    each -- one test on either edge decides it.
+//  - 1 bottom + 1 top / 2 top same-orientation: as 4/0.
+//  - 2 top mixed (always an adjacent pair): the oriented edge's relation;
+//    the misoriented one is then determined.
+const TWO_O_ZERO_SUBCASES: BLDSubcaseDef[] = [
+    ...(
+        [
+            { key: "lr-colored", label: "Misoriented between LR-colored", same: true },
+            { key: "adjacent", label: "Misoriented between adjacent-colored", same: false },
+        ] as const
+    ).map((v) => ({
+        id: `both-bottom::${v.key}`,
+        parent: "both-bottom",
+        group: "2 on bottom",
+        label: v.label,
+        fullLabel: `2 on bottom · two misoriented edges on top between ${v.same ? "LR-colored" : "LR-adjacent-colored"} corners`,
+        accept: (cube: CubieCube) => {
+            const mis = TOP_SLOTS.find((s) => cube.eo[s] === 1);
+            return mis !== undefined && betweenSameColored(cube, mis) === v.same;
+        },
+    })),
+    ...([
+        ["bottom-top-misoriented", "1 on bottom, 1 on top (misoriented)"],
+        ["bottom-top-oriented", "1 on bottom, 1 on top (oriented)"],
+    ] as const).flatMap(([parent, group]) =>
+        refined(
+            parent,
+            group,
+            THREE_RELS.map((rel) => ({
+                rel,
+                label: `Between ${REL_WORD[rel]}`,
+                fullLabel: `top LR edge between ${REL_WORD[rel]} colored corners`,
+                accept: (rels) => rels.length === 1 && rels[0] === rel,
+            }))
+        )
+    ),
+    ...([
+        ["top-both-misoriented", "2 on top (both misoriented)"],
+        ["top-both-oriented", "2 on top (both oriented)"],
+    ] as const).flatMap(([parent, group]) =>
+        refined(
+            parent,
+            group,
+            THREE_RELS.map((rel) => ({
+                rel,
+                label: `Between ${REL_WORD[rel]}`,
+                fullLabel: `top edges between ${REL_WORD[rel]} colored corners`,
+                accept: (rels) => rels.length === 2 && rels.every((r) => r === rel),
+            }))
+        )
+    ),
+    ...(["matching", "opposite", "adjacent"] as const).map((rel) => ({
+        id: `top-mixed::${rel}`,
+        parent: "top-mixed",
+        group: "2 on top (1 oriented, 1 misoriented)",
+        label: `Oriented between ${REL_WORD[rel]}`,
+        fullLabel: `2 on top (1 oriented, 1 misoriented) · oriented edge between ${REL_WORD[rel]} colored corners`,
+        accept: (cube: CubieCube) => {
+            const [o] = topLRSlots(cube, false);
+            return o !== undefined && edgeCornerRelation(cube, o) === rel;
+        },
+    })),
+];
+
 const REFINEMENTS: Partial<Record<EOCaseId, BLDSubcaseDef[]>> = {
     "4/0": FOUR_ZERO_SUBCASES,
     "0/2": FOUR_ZERO_SUBCASES,
+    "2o/0": TWO_O_ZERO_SUBCASES,
 };
 
 export const BLD_CASES: BLDCaseDef[] = EO_CASES.map((c) => ({

@@ -1,5 +1,6 @@
 import { CubieCube } from "../src/lib/CubeLib";
-import { BLD_CASES, buildBLDCube, generateBLDCase, edgeCornerRelation, topLRRelations } from "../src/lib/EOLRbBLDCases";
+import { buildEOLRbCube } from "../src/lib/EOLRbGenerator";
+import { BLD_CASES, bldParents, buildBLDCube, generateBLDCase, edgeCornerRelation, topLRRelations } from "../src/lib/EOLRbBLDCases";
 
 // Checks the BLD trainer's corner-relative subcases: the classifier's
 // conventions, and that every subcase is generated and survives the
@@ -27,7 +28,7 @@ const fb = withEp([1, 0, 3, 2, 4, 5, 6, 7, 8, 9, 10, 11]);
 check(edgeCornerRelation(fb, UF) === "adjacent" && edgeCornerRelation(fb, UB) === "adjacent", "LR at UF/UB adjacent");
 check(edgeCornerRelation(new CubieCube(), UL) === "matching", "solved UL matching");
 
-const REFINED = ["4/0", "0/2"] as const;
+const REFINED = ["4/0", "0/2", "2o/0"] as const;
 for (const id of REFINED) {
     const def = BLD_CASES.find((x) => x.id === id)!;
     for (const s of def.subcases) {
@@ -38,6 +39,17 @@ for (const id of REFINED) {
             check(ok, `scrambled ${id} ${s.id}: ${k.scramble} rels=${topLRRelations(k.cube)}`);
         }
         console.log("ok", id, s.id);
+    }
+}
+// Each sighted parent's refinements partition it: every built parent cube is
+// accepted by exactly one refinement.
+for (const id of REFINED) {
+    for (const p of bldParents(BLD_CASES.find((x) => x.id === id)!)) {
+        for (let i = 0; i < 300; i++) {
+            const cube = buildEOLRbCube(id, p.parent);
+            const n = p.subcases.filter((s) => s.accept(cube)).length;
+            check(n === 1, `${id} ${p.parent}: ${n} refinements accept a cube`);
+        }
     }
 }
 // Unrefined EO cases still generate.
