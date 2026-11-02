@@ -126,39 +126,15 @@ function topLRSlots(cube: CubieCube, misoriented: boolean): number[] {
     return TOP_SLOTS.filter((s) => LR_PIECES.has(cube.ep[s]) && (cube.eo[s] === 1) === misoriented);
 }
 
-// Whether a top slot sits between two corners of the same L/R color.
-function betweenSameColored(cube: CubieCube, slot: number): boolean {
-    const [a, b] = CORNERS_AROUND[slot].map((c) => L_COLORED_CORNERS.has(cube.cp[c]));
-    return a === b;
-}
-
 const THREE_RELS = ["opposite", "matching", "adjacent"] as const;
 
 // 2o/0: misoriented UF/UB, oriented UL/UR.
-//  - 2 on bottom: the top misoriented pair is an opposite pair, so both
-//    edges are either between same-colored corners (one between the two L
-//    corners, the other between the two R corners) or both between one of
-//    each -- one test on either edge decides it.
+//  - 2 on bottom: a single case, no split.
 //  - 1 bottom + 1 top / 2 top same-orientation: as 4/0.
 //  - 2 top mixed (always an adjacent pair): the oriented edge's relation;
 //    the misoriented one is then determined.
 const TWO_O_ZERO_SUBCASES: BLDSubcaseDef[] = [
-    ...(
-        [
-            { key: "lr-colored", label: "Misoriented between LR-colored", same: true },
-            { key: "adjacent", label: "Misoriented between adjacent-colored", same: false },
-        ] as const
-    ).map((v) => ({
-        id: `both-bottom::${v.key}`,
-        parent: "both-bottom",
-        group: "2 on bottom",
-        label: v.label,
-        fullLabel: `2 on bottom · two misoriented edges on top between ${v.same ? "LR-colored" : "LR-adjacent-colored"} corners`,
-        accept: (cube: CubieCube) => {
-            const mis = TOP_SLOTS.find((s) => cube.eo[s] === 1);
-            return mis !== undefined && betweenSameColored(cube, mis) === v.same;
-        },
-    })),
+    { id: "both-bottom", parent: "both-bottom", label: "2 on bottom", fullLabel: "2 on bottom", accept: always },
     ...([
         ["bottom-top-misoriented", "1 on bottom, 1 on top (misoriented)"],
         ["bottom-top-oriented", "1 on bottom, 1 on top (oriented)"],
