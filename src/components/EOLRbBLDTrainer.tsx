@@ -638,6 +638,9 @@ function CasePicker({
             </Fragment>
           ))}
         </nav>
+        <span className="picker-total">
+          {levelOn}/{levelKeys.length} selected
+        </span>
         <button type="button" className="text-button picker-all" onClick={() => toggleKeys(levelKeys)}>
           {levelAll ? "Select none" : "Select all"}
         </button>
