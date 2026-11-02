@@ -25,6 +25,14 @@ npx tsx scripts/verify.ts
 Cross-checks every EO case / subcase combination against independent,
 from-scratch classifiers -- not just round-tripping the generator's own logic.
 
+```bash
+npx tsx scripts/verifyBLD.ts
+```
+
+Checks the BLD trainer's finer subcases (e.g. 4/0's LR edge vs. corner
+colors): the classifier's conventions, and that every subcase is generated
+and still holds after the scramble round-trip.
+
 ## Deployment
 
 Pushing to `main` builds and deploys automatically to GitHub Pages via

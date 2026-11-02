@@ -1,6 +1,14 @@
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
-import { EO_CASES, type EOLRbCase, type EOCaseId } from "../lib/EOLRbGenerator";
-import { comboKey, ALL_KEYS, caseLabel, restoreEnabled, caseForEnabled } from "../lib/EOLRbCombos";
+import { Fragment, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { type EOLRbCase, type EOCaseId } from "../lib/EOLRbGenerator";
+import {
+  BLD_CASES,
+  BLD_KEYS as ALL_KEYS,
+  bldKey as comboKey,
+  bldCaseLabel as caseLabel,
+  restoreBLDEnabled as restoreEnabled,
+  bldCaseForEnabled as caseForEnabled,
+  type BLDSubcaseDef,
+} from "../lib/EOLRbBLDCases";
 import {
   loadBLDStats,
   saveBLDStats,
@@ -33,6 +41,19 @@ const NAMESPACE = "bld";
 // Running yes/no tally since the last reset -- the BLD page's equivalent of
 // the other pages' rep counter.
 const SESSION_KEY = "eolrb-trainer-bld-session-v1";
+
+// Splits an EO case's subcases into runs sharing a group heading (e.g. 4/0's
+// "1 on bottom, 1 on top"), keeping their order. Ungrouped ones form runs
+// with no heading.
+function groupSubcases(subcases: BLDSubcaseDef[]): { group?: string; items: BLDSubcaseDef[] }[] {
+  const runs: { group?: string; items: BLDSubcaseDef[] }[] = [];
+  for (const s of subcases) {
+    const last = runs[runs.length - 1];
+    if (last && last.group === s.group) last.items.push(s);
+    else runs.push({ group: s.group, items: [s] });
+  }
+  return runs;
+}
 
 type LastAttempt = { key: string; label: string; success: boolean };
 
@@ -149,8 +170,12 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
   };
 
   const toggleEOCase = (eoCase: EOCaseId) => {
-    const def = EO_CASES.find((c) => c.id === eoCase)!;
-    const keys = def.subcases.map((s) => comboKey({ eoCase, subcase: s.id }));
+    const def = BLD_CASES.find((c) => c.id === eoCase)!;
+    toggleKeys(def.subcases.map((s) => comboKey({ eoCase, subcase: s.id })));
+  };
+
+  // Turns a set of cases all on, or all off if they already are.
+  const toggleKeys = (keys: string[]) => {
     const allOn = keys.every((k) => enabled.has(k));
     const nextEnabled = new Set(enabled);
     if (allOn) keys.forEach((k) => nextEnabled.delete(k));
@@ -426,7 +451,7 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
               </button>
             </div>
             <div className="modal-body">
-              {EO_CASES.map((c) => {
+              {BLD_CASES.map((c) => {
                 const keys = c.subcases.map((s) => comboKey({ eoCase: c.id, subcase: s.id }));
                 const allOn = keys.every((k) => enabled.has(k));
                 const anyOn = keys.some((k) => enabled.has(k));
@@ -436,21 +461,36 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
                       <input type="checkbox" checked={allOn} onChange={() => toggleEOCase(c.id)} />
                       <span>{c.label}</span>
                     </label>
-                    <div className="toggle-row">
-                      {c.subcases.map((s) => {
-                        const key = comboKey({ eoCase: c.id, subcase: s.id });
-                        const pct = stats[key] ? successPct(stats[key]) : null;
-                        return (
-                          <label key={key} className={`toggle-chip ${enabled.has(key) ? "on" : ""}`}>
-                            <input type="checkbox" checked={enabled.has(key)} onChange={() => toggleCombo(key)} />
-                            <span className="chip-label">{s.label}</span>
-                            <span className={`chip-detail bld-rate-${rateTier(pct)}`}>
-                              {pct === null ? "not tried" : `${pct}% blind`}
-                            </span>
-                          </label>
-                        );
-                      })}
-                    </div>
+                    {groupSubcases(c.subcases).map((run, ri) => {
+                      const runKeys = run.items.map((s) => comboKey({ eoCase: c.id, subcase: s.id }));
+                      const runAllOn = runKeys.every((k) => enabled.has(k));
+                      const runAnyOn = runKeys.some((k) => enabled.has(k));
+                      return (
+                        <div key={ri} className="bld-subgroup">
+                          {run.group && (
+                            <label className={`bld-subgroup-header ${runAllOn ? "on" : runAnyOn ? "partial" : ""}`}>
+                              <input type="checkbox" checked={runAllOn} onChange={() => toggleKeys(runKeys)} />
+                              <span>{run.group}</span>
+                            </label>
+                          )}
+                          <div className="toggle-row">
+                            {run.items.map((s) => {
+                              const key = comboKey({ eoCase: c.id, subcase: s.id });
+                              const pct = stats[key] ? successPct(stats[key]) : null;
+                              return (
+                                <label key={key} className={`toggle-chip ${enabled.has(key) ? "on" : ""}`}>
+                                  <input type="checkbox" checked={enabled.has(key)} onChange={() => toggleCombo(key)} />
+                                  <span className="chip-label">{s.label}</span>
+                                  <span className={`chip-detail bld-rate-${rateTier(pct)}`}>
+                                    {pct === null ? "not tried" : `${pct}% blind`}
+                                  </span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 );
               })}
@@ -499,7 +539,7 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
                 </span>
               </div>
 
-              {EO_CASES.map((c) => {
+              {BLD_CASES.map((c) => {
                 const keys = c.subcases.map((s) => comboKey({ eoCase: c.id, subcase: s.id }));
                 const group = totalStats(stats, keys);
                 const groupPct = successPct(group);
@@ -520,34 +560,42 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
                         <span role="columnheader">Success</span>
                         <span role="columnheader" aria-label="Clear" />
                       </div>
-                      {c.subcases.map((s) => {
+                      {c.subcases.map((s, si) => {
                         const key = comboKey({ eoCase: c.id, subcase: s.id });
                         const st = stats[key];
+                        const startsGroup = s.group && s.group !== c.subcases[si - 1]?.group;
                         const pct = st ? successPct(st) : null;
                         return (
-                          <div key={key} className={`bld-row ${st ? "" : "untried"}`} role="row">
-                            <span className="bld-case" role="cell">{s.label}</span>
-                            <span className="bld-num" role="cell">{st ? st.yes + st.no : "—"}</span>
-                            <span className="bld-num yes" role="cell">{st ? st.yes : "—"}</span>
-                            <span className="bld-num no" role="cell">{st ? st.no : "—"}</span>
-                            <span className="bld-rate-cell" role="cell">
-                              <span className={`bld-rate-text bld-rate-${rateTier(pct)}`}>{pctText(pct)}</span>
-                              <RateBar stats={st ?? { yes: 0, no: 0 }} className="mini-bar-track bld-mini-bar" />
-                            </span>
-                            <span role="cell">
-                              {st && (
-                                <button
-                                  type="button"
-                                  className="bld-row-clear"
-                                  onClick={() => clearCaseStats(key, caseLabel(c.id, s.id))}
-                                  aria-label={`Clear stats for ${s.label}`}
-                                  title="Clear this case's stats"
-                                >
-                                  &times;
-                                </button>
-                              )}
-                            </span>
-                          </div>
+                          <Fragment key={key}>
+                            {startsGroup && (
+                              <div className="bld-row bld-group-row" role="row">
+                                <span role="cell">{s.group}</span>
+                              </div>
+                            )}
+                            <div className={`bld-row ${st ? "" : "untried"} ${s.group ? "grouped" : ""}`} role="row">
+                              <span className="bld-case" role="cell">{s.label}</span>
+                              <span className="bld-num" role="cell">{st ? st.yes + st.no : "—"}</span>
+                              <span className="bld-num yes" role="cell">{st ? st.yes : "—"}</span>
+                              <span className="bld-num no" role="cell">{st ? st.no : "—"}</span>
+                              <span className="bld-rate-cell" role="cell">
+                                <span className={`bld-rate-text bld-rate-${rateTier(pct)}`}>{pctText(pct)}</span>
+                                <RateBar stats={st ?? { yes: 0, no: 0 }} className="mini-bar-track bld-mini-bar" />
+                              </span>
+                              <span role="cell">
+                                {st && (
+                                  <button
+                                    type="button"
+                                    className="bld-row-clear"
+                                    onClick={() => clearCaseStats(key, caseLabel(c.id, s.id))}
+                                    aria-label={`Clear stats for ${s.label}`}
+                                    title="Clear this case's stats"
+                                  >
+                                    &times;
+                                  </button>
+                                )}
+                              </span>
+                            </div>
+                          </Fragment>
                         );
                       })}
                     </div>

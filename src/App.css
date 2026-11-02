@@ -1526,3 +1526,52 @@ main {
     line-height: 1.25;
   }
 }
+
+/* BLD sub-groups: finer cases listed under a heading inside an EO case
+   (e.g. 4/0 -> "1 on bottom, 1 on top" -> corner-color variants). */
+.bld-subgroup + .bld-subgroup {
+  margin-top: 12px;
+}
+
+.bld-subgroup-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+  margin-bottom: 8px;
+}
+
+.bld-subgroup-header input {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--accent);
+}
+
+.bld-subgroup-header.on span {
+  color: var(--accent);
+}
+
+.bld-subgroup-header.partial span {
+  opacity: 0.75;
+}
+
+.bld-row.bld-group-row {
+  display: block;
+  padding: 10px 8px 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.bld-row.bld-group-row:hover {
+  background: none;
+}
+
+.bld-row.grouped .bld-case {
+  padding-left: 14px;
+}

@@ -292,7 +292,13 @@ export function allCombos(): EnabledCombo[] {
 export function generateCase(enabled: EnabledCombo[]): EOLRbCase {
     const pool = enabled.length > 0 ? enabled : allCombos();
     const { eoCase, subcase } = rand_choice(pool);
-    const constructed = buildEOLRbCube(eoCase, subcase);
+    return caseFromConstructed(buildEOLRbCube(eoCase, subcase), eoCase, subcase);
+}
+
+// Turns an already-built case cube into a full trainer case: scramble,
+// solutions, move count. Exposed separately so the BLD trainer can filter
+// built cubes by finer criteria (e.g. LR edge vs. corner colors) first.
+export function caseFromConstructed(constructed: CubieCube, eoCase: EOCaseId, subcase: string): EOLRbCase {
 
     const scrambleSolver = CachedSolver.get(SCRAMBLE_SOLVER_NAME);
     const solveBack = rand_choice(scrambleSolver.solve(constructed, 0, 20, 3));
