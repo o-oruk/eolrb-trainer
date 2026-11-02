@@ -134,8 +134,13 @@ const twoTopAdjacent = (parent: string, group: string, edge = "edge") =>
 // 2 LR edges on top, one oriented and one misoriented: the relation of the
 // named one (all three are possible whether the pair is adjacent or
 // opposite).
-const twoTopMixed = (parent: string, group: string, by: "oriented" | "misoriented"): BLDSubcaseDef[] =>
-    (["matching", "opposite", "adjacent"] as const).map((rel) => ({
+const twoTopMixed = (
+    parent: string,
+    group: string,
+    by: "oriented" | "misoriented",
+    order: readonly CornerRelation[] = ["matching", "opposite", "adjacent"]
+): BLDSubcaseDef[] =>
+    order.map((rel) => ({
         id: `${parent}::${rel}`,
         parent,
         group,
@@ -144,6 +149,38 @@ const twoTopMixed = (parent: string, group: string, by: "oriented" | "misoriente
         accept: (cube: CubieCube) => {
             const [slot] = topLRSlots(cube, by === "misoriented");
             return slot !== undefined && edgeCornerRelation(cube, slot) === rel;
+        },
+    }));
+
+// Same-colored corners either side (both L or both R -- "LR-colored") vs one
+// of each ("adjacent-colored"). For an opposite pair of top slots both
+// always fall in the same bucket, so one test on either slot decides it.
+type SideColoring = "lr-colored" | "adjacent";
+const SIDE_COLORINGS: { key: SideColoring; word: string }[] = [
+    { key: "lr-colored", word: "LR-colored" },
+    { key: "adjacent", word: "adjacent-colored" },
+];
+function sideColoring(cube: CubieCube, slot: number): SideColoring {
+    const [a, b] = CORNERS_AROUND[slot].map((c) => L_COLORED_CORNERS.has(cube.cp[c]));
+    return a === b ? "lr-colored" : "adjacent";
+}
+
+// Splits an opposite pair of top slots (found by `slotOf`) by side coloring.
+const byOppositePairColoring = (
+    parent: string,
+    group: string,
+    what: string,
+    slotOf: (cube: CubieCube) => number | undefined
+): BLDSubcaseDef[] =>
+    SIDE_COLORINGS.map(({ key, word }) => ({
+        id: `${parent}::${key}`,
+        parent,
+        group,
+        label: `${what} between ${word}`,
+        fullLabel: `${group} · ${what.toLowerCase()} between ${word} corners`,
+        accept: (cube: CubieCube) => {
+            const slot = slotOf(cube);
+            return slot !== undefined && sideColoring(cube, slot) === key;
         },
     }));
 
@@ -180,12 +217,32 @@ const TWO_A_SUBCASES: BLDSubcaseDef[] = [
     ...twoTopMixed("top-mixed-opposite", "2 on top opposite (1 oriented, 1 misoriented)", "misoriented"),
 ];
 
+// 2o/2: misoriented UL/UR, oriented UF/UB, both bottom slots misoriented.
+// Same-orientation top pairs are opposite pairs, split only by whether
+// their corners are same-colored (matching and opposite together) or mixed;
+// the mixed pair is always adjacent.
+const TWO_O_TWO_SUBCASES: BLDSubcaseDef[] = [
+    ...byOppositePairColoring("both-bottom", "2 on bottom", "Misoriented", (cube) =>
+        TOP_SLOTS.find((s) => cube.eo[s] === 1)
+    ),
+    ...oneTop("bottom-top-oriented", "1 on bottom, 1 on top (oriented)", "top LR edge"),
+    ...oneTop("bottom-top-misoriented", "1 on bottom, 1 on top (misoriented)", "top LR edge"),
+    ...byOppositePairColoring("top-both-misoriented", "2 on top (both misoriented)", "LR edges", (cube) =>
+        topLRSlots(cube, true)[0]
+    ),
+    ...byOppositePairColoring("top-both-oriented", "2 on top (both oriented)", "LR edges", (cube) =>
+        topLRSlots(cube, false)[0]
+    ),
+    ...twoTopMixed("top-mixed", "2 on top (1 oriented, 1 misoriented)", "misoriented", ["opposite", "matching", "adjacent"]),
+];
+
 const REFINEMENTS: Partial<Record<EOCaseId, BLDSubcaseDef[]>> = {
     "4/0": FOUR_ZERO_SUBCASES,
     "0/2": FOUR_ZERO_SUBCASES,
     "2o/0": TWO_O_ZERO_SUBCASES,
     "2a/0": TWO_A_SUBCASES,
     "2a/2": TWO_A_SUBCASES,
+    "2o/2": TWO_O_TWO_SUBCASES,
 };
 
 export const BLD_CASES: BLDCaseDef[] = EO_CASES.map((c) => ({
