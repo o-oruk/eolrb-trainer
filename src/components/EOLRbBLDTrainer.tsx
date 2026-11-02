@@ -7,7 +7,7 @@ import {
   bldCaseLabel as caseLabel,
   restoreBLDEnabled as restoreEnabled,
   bldCaseForEnabled as caseForEnabled,
-  type BLDSubcaseDef,
+  bldParents,
 } from "../lib/EOLRbBLDCases";
 import {
   loadBLDStats,
@@ -41,19 +41,6 @@ const NAMESPACE = "bld";
 // Running yes/no tally since the last reset -- the BLD page's equivalent of
 // the other pages' rep counter.
 const SESSION_KEY = "eolrb-trainer-bld-session-v1";
-
-// Splits an EO case's subcases into runs sharing a group heading (e.g. 4/0's
-// "1 on bottom, 1 on top"), keeping their order. Ungrouped ones form runs
-// with no heading.
-function groupSubcases(subcases: BLDSubcaseDef[]): { group?: string; items: BLDSubcaseDef[] }[] {
-  const runs: { group?: string; items: BLDSubcaseDef[] }[] = [];
-  for (const s of subcases) {
-    const last = runs[runs.length - 1];
-    if (last && last.group === s.group) last.items.push(s);
-    else runs.push({ group: s.group, items: [s] });
-  }
-  return runs;
-}
 
 type LastAttempt = { key: string; label: string; success: boolean };
 
@@ -89,6 +76,9 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
   const [session, setSession] = useState<BLDCaseStats>(() => loadJSON(SESSION_KEY, { yes: 0, no: 0 }));
   const [lastAttempt, setLastAttempt] = useState<LastAttempt | null>(null);
   const [prefs, setPrefs] = useState<Settings>(() => loadSettings());
+  // Where the case picker is drilled to: all EO cases -> one EO case's
+  // sighted subcases -> one sighted subcase's BLD refinements.
+  const [nav, setNav] = useState<PickerNav>({});
 
   const facelet = useMemo(() => (current ? FaceletCube.from_cubie(current.cube) : SOLVED_FACELET), [current]);
   const colorScheme = useMemo(
@@ -161,19 +151,6 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
     if (lastAttempt?.key === key) setLastAttempt(null);
   };
 
-  const toggleCombo = (key: string) => {
-    const nextEnabled = new Set(enabled);
-    if (nextEnabled.has(key)) nextEnabled.delete(key);
-    else nextEnabled.add(key);
-    setEnabled(nextEnabled);
-    next(nextEnabled);
-  };
-
-  const toggleEOCase = (eoCase: EOCaseId) => {
-    const def = BLD_CASES.find((c) => c.id === eoCase)!;
-    toggleKeys(def.subcases.map((s) => comboKey({ eoCase, subcase: s.id })));
-  };
-
   // Turns a set of cases all on, or all off if they already are.
   const toggleKeys = (keys: string[]) => {
     const allOn = keys.every((k) => enabled.has(k));
@@ -211,6 +188,10 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        if (settingsOpen && nav.eoCase) {
+          setNav(nav.parent ? { eoCase: nav.eoCase } : {});
+          return;
+        }
         setSettingsOpen(false);
         setStatsOpen(false);
         return;
@@ -450,51 +431,7 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
                 &times;
               </button>
             </div>
-            <div className="modal-body">
-              {BLD_CASES.map((c) => {
-                const keys = c.subcases.map((s) => comboKey({ eoCase: c.id, subcase: s.id }));
-                const allOn = keys.every((k) => enabled.has(k));
-                const anyOn = keys.some((k) => enabled.has(k));
-                return (
-                  <div key={c.id} className="eo-case-group">
-                    <label className={`eo-case-header ${allOn ? "on" : anyOn ? "partial" : ""}`}>
-                      <input type="checkbox" checked={allOn} onChange={() => toggleEOCase(c.id)} />
-                      <span>{c.label}</span>
-                    </label>
-                    {groupSubcases(c.subcases).map((run, ri) => {
-                      const runKeys = run.items.map((s) => comboKey({ eoCase: c.id, subcase: s.id }));
-                      const runAllOn = runKeys.every((k) => enabled.has(k));
-                      const runAnyOn = runKeys.some((k) => enabled.has(k));
-                      return (
-                        <div key={ri} className="bld-subgroup">
-                          {run.group && (
-                            <label className={`bld-subgroup-header ${runAllOn ? "on" : runAnyOn ? "partial" : ""}`}>
-                              <input type="checkbox" checked={runAllOn} onChange={() => toggleKeys(runKeys)} />
-                              <span>{run.group}</span>
-                            </label>
-                          )}
-                          <div className="toggle-row">
-                            {run.items.map((s) => {
-                              const key = comboKey({ eoCase: c.id, subcase: s.id });
-                              const pct = stats[key] ? successPct(stats[key]) : null;
-                              return (
-                                <label key={key} className={`toggle-chip ${enabled.has(key) ? "on" : ""}`}>
-                                  <input type="checkbox" checked={enabled.has(key)} onChange={() => toggleCombo(key)} />
-                                  <span className="chip-label">{s.label}</span>
-                                  <span className={`chip-detail bld-rate-${rateTier(pct)}`}>
-                                    {pct === null ? "not tried" : `${pct}% blind`}
-                                  </span>
-                                </label>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })}
-            </div>
+            <CasePicker nav={nav} setNav={setNav} enabled={enabled} stats={stats} toggleKeys={toggleKeys} />
             <div className="modal-footer">
               <button className="primary" onClick={() => setSettingsOpen(false)}>
                 Done
@@ -614,6 +551,136 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+type PickerNav = { eoCase?: EOCaseId; parent?: string };
+
+type PickerRow = {
+  id: string;
+  label: string;
+  keys: string[];
+  // Drilling target; absent = a leaf row, where clicking toggles instead.
+  drill?: PickerNav;
+};
+
+// Three-level drill-down: EO cases -> sighted subcases -> BLD refinements.
+// Each row has a tri-state check (toggles everything under it) and, unless
+// it's a leaf, opens the next level when clicked.
+function CasePicker({
+  nav,
+  setNav,
+  enabled,
+  stats,
+  toggleKeys,
+}: {
+  nav: PickerNav;
+  setNav: (n: PickerNav) => void;
+  enabled: Set<string>;
+  stats: BLDStatsState;
+  toggleKeys: (keys: string[]) => void;
+}) {
+  const eoDef = nav.eoCase ? BLD_CASES.find((c) => c.id === nav.eoCase) : undefined;
+  const parents = eoDef ? bldParents(eoDef) : [];
+  const parentDef = nav.parent ? parents.find((p) => p.parent === nav.parent) : undefined;
+
+  const keysOf = (eoCase: EOCaseId, subcases: { id: string }[]) =>
+    subcases.map((s) => comboKey({ eoCase, subcase: s.id }));
+
+  let rows: PickerRow[];
+  if (eoDef && parentDef) {
+    rows = parentDef.subcases.map((s) => ({ id: s.id, label: s.label, keys: keysOf(eoDef.id, [s]) }));
+  } else if (eoDef) {
+    rows = parents.map((p) => ({
+      id: p.parent,
+      label: p.label,
+      keys: keysOf(eoDef.id, p.subcases),
+      drill: p.subcases.length > 1 ? { eoCase: eoDef.id, parent: p.parent } : undefined,
+    }));
+  } else {
+    rows = BLD_CASES.map((c) => ({ id: c.id, label: c.label, keys: keysOf(c.id, c.subcases), drill: { eoCase: c.id } }));
+  }
+
+  const levelKeys = rows.flatMap((r) => r.keys);
+  const levelOn = levelKeys.filter((k) => enabled.has(k)).length;
+  const levelAll = levelOn === levelKeys.length;
+
+  const crumbs: { label: string; to: PickerNav }[] = [{ label: "All cases", to: {} }];
+  if (eoDef) crumbs.push({ label: eoDef.label, to: { eoCase: eoDef.id } });
+  if (eoDef && parentDef) crumbs.push({ label: parentDef.label, to: { eoCase: eoDef.id, parent: parentDef.parent } });
+
+  return (
+    <div className="modal-body picker-body">
+      <div className="picker-toolbar">
+        {crumbs.length > 1 && (
+          <button
+            type="button"
+            className="picker-back"
+            onClick={() => setNav(crumbs[crumbs.length - 2].to)}
+            aria-label="Back"
+            title="Back (Esc)"
+          >
+            &#8249;
+          </button>
+        )}
+        <nav className="picker-crumbs" aria-label="Case level">
+          {crumbs.map((c, i) => (
+            <Fragment key={i}>
+              {i > 0 && <span className="picker-crumb-sep">&#8250;</span>}
+              {i === crumbs.length - 1 ? (
+                <span className="picker-crumb current">{c.label}</span>
+              ) : (
+                <button type="button" className="picker-crumb" onClick={() => setNav(c.to)}>
+                  {c.label}
+                </button>
+              )}
+            </Fragment>
+          ))}
+        </nav>
+        <button type="button" className="text-button picker-all" onClick={() => toggleKeys(levelKeys)}>
+          {levelAll ? "Select none" : "Select all"}
+        </button>
+      </div>
+
+      <ul className="picker-list">
+        {rows.map((r) => {
+          const on = r.keys.filter((k) => enabled.has(k)).length;
+          const state = on === 0 ? "off" : on === r.keys.length ? "on" : "partial";
+          const total = totalStats(stats, r.keys);
+          const pct = successPct(total);
+          const attempts = total.yes + total.no;
+          const onRow = () => (r.drill ? setNav(r.drill) : toggleKeys(r.keys));
+          return (
+            <li key={r.id} className={`picker-row ${state}`}>
+              <button
+                type="button"
+                className={`picker-check ${state}`}
+                role="checkbox"
+                aria-checked={state === "partial" ? "mixed" : state === "on"}
+                aria-label={`Train ${r.label}`}
+                onClick={() => toggleKeys(r.keys)}
+              >
+                {state === "on" ? "✓" : state === "partial" ? "–" : ""}
+              </button>
+              <button type="button" className="picker-main" onClick={onRow}>
+                <span className="picker-label">{r.label}</span>
+                <span className="picker-meta">
+                  {r.keys.length > 1 && (
+                    <span className="picker-count">
+                      {on}/{r.keys.length} selected
+                    </span>
+                  )}
+                  <span className={`picker-rate bld-rate-${rateTier(pct)}`}>
+                    {attempts ? `${pct}% · ${attempts} tries` : "not tried"}
+                  </span>
+                </span>
+                {r.drill && <span className="picker-chevron" aria-hidden="true">&#8250;</span>}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

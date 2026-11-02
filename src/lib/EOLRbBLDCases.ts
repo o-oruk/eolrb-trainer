@@ -134,6 +134,21 @@ export const BLD_CASES: BLDCaseDef[] = EO_CASES.map((c) => ({
 
 const BLD_CASE_BY_ID = new Map(BLD_CASES.map((c) => [c.id, c]));
 
+// The sighted subcases ("parents") of an EO case, each with the BLD subcases
+// refining it -- the middle level of the case picker. An unrefined parent
+// has exactly one BLD subcase: itself.
+export type BLDParentGroup = { parent: string; label: string; subcases: BLDSubcaseDef[] };
+
+export function bldParents(c: BLDCaseDef): BLDParentGroup[] {
+    const out: BLDParentGroup[] = [];
+    for (const s of c.subcases) {
+        const last = out[out.length - 1];
+        if (last && last.parent === s.parent) last.subcases.push(s);
+        else out.push({ parent: s.parent, label: s.group ?? s.label, subcases: [s] });
+    }
+    return out;
+}
+
 export type BLDCombo = { eoCase: EOCaseId; subcase: string };
 
 export function bldKey(c: BLDCombo): string {

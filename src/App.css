@@ -1527,37 +1527,186 @@ main {
   }
 }
 
-/* BLD sub-groups: finer cases listed under a heading inside an EO case
-   (e.g. 4/0 -> "1 on bottom, 1 on top" -> corner-color variants). */
-.bld-subgroup + .bld-subgroup {
-  margin-top: 12px;
+/* BLD case picker: a drill-down list (EO cases -> sighted subcases -> BLD
+   refinements) with a breadcrumb, instead of a wall of chips. */
+.picker-body {
+  gap: 10px;
 }
 
-.bld-subgroup-header {
+.picker-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+}
+
+.picker-back {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--code-bg);
+  color: var(--text-h);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  padding: 0 0 2px;
+}
+
+.picker-back:hover {
+  border-color: var(--accent-border);
+}
+
+.picker-crumbs {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
   font-size: 13px;
+}
+
+.picker-crumb {
+  font: inherit;
   font-weight: 600;
   color: var(--text);
+  background: none;
+  border: none;
+  padding: 2px 2px;
   cursor: pointer;
-  user-select: none;
-  margin-bottom: 8px;
 }
 
-.bld-subgroup-header input {
-  width: 14px;
-  height: 14px;
-  accent-color: var(--accent);
-}
-
-.bld-subgroup-header.on span {
+button.picker-crumb:hover {
   color: var(--accent);
 }
 
-.bld-subgroup-header.partial span {
-  opacity: 0.75;
+.picker-crumb.current {
+  color: var(--text-h);
+  cursor: default;
+}
+
+.picker-crumb-sep {
+  color: var(--text);
+  opacity: 0.6;
+}
+
+.picker-all {
+  flex: none;
+  font-size: 12px;
+}
+
+.picker-list {
+  flex: none;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.picker-row {
+  display: flex;
+  align-items: stretch;
+  transition: background 0.15s;
+}
+
+.picker-row + .picker-row {
+  border-top: 1px solid var(--border);
+}
+
+.picker-row:hover {
+  background: var(--code-bg);
+}
+
+.picker-check {
+  flex: none;
+  align-self: center;
+  width: 20px;
+  height: 20px;
+  margin: 0 4px 0 14px;
+  border-radius: 6px;
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.picker-check:hover {
+  border-color: var(--accent);
+}
+
+.picker-check.on,
+.picker-check.partial {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.picker-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px 12px 10px;
+  font: inherit;
+  line-height: 1.3;
+  text-align: left;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.picker-label {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.picker-row.off .picker-label {
+  color: var(--text);
+}
+
+.picker-meta {
+  flex: none;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  line-height: 1.2;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.picker-count {
+  color: var(--text);
+}
+
+.picker-chevron {
+  flex: none;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--text);
+  padding-bottom: 2px;
+}
+
+.picker-row:hover .picker-chevron {
+  color: var(--accent);
 }
 
 .bld-row.bld-group-row {
