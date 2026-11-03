@@ -1704,6 +1704,36 @@ button.picker-crumb:hover {
   color: var(--text);
 }
 
+.picker-count.all-learned {
+  color: var(--success);
+}
+
+/* Learned marker on single-case rows: a compact version of the sighted
+   trainer's mastery toggle, cycling the same four levels. */
+.mastery-toggle.picker-mastery {
+  flex: none;
+  align-self: center;
+  width: 128px;
+  margin-right: 12px;
+  padding: 5px 8px;
+  gap: 6px;
+  font-size: 12px;
+  border-radius: 999px;
+}
+
+.picker-mastery .mastery-check {
+  width: 14px;
+  height: 14px;
+  font-size: 9px;
+}
+
+.mastery-toggle.bld-case-mastery {
+  margin-top: 12px;
+  width: 160px;
+  padding: 7px 12px;
+  font-size: 13px;
+}
+
 .picker-chevron {
   flex: none;
   font-size: 20px;

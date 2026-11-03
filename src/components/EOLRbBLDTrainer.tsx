@@ -20,6 +20,7 @@ import {
   type BLDStatsState,
 } from "../lib/BLDStats";
 import { loadJSON, saveJSON } from "../lib/Storage";
+import { loadProgress, saveProgress, nextMasteryLevel, masteryLabel, masterySymbol, type ProgressState } from "../lib/Progress";
 import { saveSelection } from "../lib/Selection";
 import { loadSettings, saveSettings, type Settings } from "../lib/Settings";
 import { colorSchemeFor, validFrontsFor, COLOR_LETTERS, COLOR_NAMES, type ColorLetter } from "../lib/ColorScheme";
@@ -76,6 +77,9 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
   const [session, setSession] = useState<BLDCaseStats>(() => loadJSON(SESSION_KEY, { yes: 0, no: 0 }));
   const [lastAttempt, setLastAttempt] = useState<LastAttempt | null>(null);
   const [prefs, setPrefs] = useState<Settings>(() => loadSettings());
+  // How well each BLD case is learned -- same four levels as the sighted
+  // EOLRb trainer, tracked separately.
+  const [progress, setProgress] = useState<ProgressState>(() => loadProgress(NAMESPACE));
   // Where the case picker is drilled to: all EO cases -> one EO case's
   // sighted subcases -> one sighted subcase's BLD refinements.
   const [nav, setNav] = useState<PickerNav>({});
@@ -101,6 +105,20 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
   useEffect(() => {
     saveSettings(prefs);
   }, [prefs]);
+
+  useEffect(() => {
+    saveProgress(progress, NAMESPACE);
+  }, [progress]);
+
+  const cycleMastery = (key: string) => {
+    setProgress((prev) => {
+      const level = nextMasteryLevel(prev[key]);
+      const updated = { ...prev };
+      if (level) updated[key] = level;
+      else delete updated[key];
+      return updated;
+    });
+  };
 
   const currentKey = current ? comboKey({ eoCase: current.eoCase, subcase: current.subcase }) : null;
   const currentLabel = current ? caseLabel(current.eoCase, current.subcase) : null;
@@ -335,6 +353,16 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
                 <div className="card-label">Case</div>
                 <div className="case-name">{currentLabel}</div>
                 {currentKey && <CaseRecord stats={stats[currentKey]} />}
+                {currentKey && (
+                  <button
+                    type="button"
+                    className={`mastery-toggle bld-case-mastery level-${progress[currentKey] ?? "none"}`}
+                    onClick={() => cycleMastery(currentKey)}
+                  >
+                    <span className="mastery-check">{masterySymbol(progress[currentKey])}</span>
+                    <span>{masteryLabel(progress[currentKey])}</span>
+                  </button>
+                )}
               </div>
 
               <div className="card">
@@ -431,7 +459,15 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
                 &times;
               </button>
             </div>
-            <CasePicker nav={nav} setNav={setNav} enabled={enabled} stats={stats} toggleKeys={toggleKeys} />
+            <CasePicker
+              nav={nav}
+              setNav={setNav}
+              enabled={enabled}
+              stats={stats}
+              progress={progress}
+              cycleMastery={cycleMastery}
+              toggleKeys={toggleKeys}
+            />
             <div className="modal-footer">
               <button className="primary" onClick={() => setSettingsOpen(false)}>
                 Done
@@ -573,12 +609,16 @@ function CasePicker({
   setNav,
   enabled,
   stats,
+  progress,
+  cycleMastery,
   toggleKeys,
 }: {
   nav: PickerNav;
   setNav: (n: PickerNav) => void;
   enabled: Set<string>;
   stats: BLDStatsState;
+  progress: ProgressState;
+  cycleMastery: (key: string) => void;
   toggleKeys: (keys: string[]) => void;
 }) {
   const eoDef = nav.eoCase ? BLD_CASES.find((c) => c.id === nav.eoCase) : undefined;
@@ -605,6 +645,7 @@ function CasePicker({
   const levelKeys = rows.flatMap((r) => r.keys);
   const levelOn = levelKeys.filter((k) => enabled.has(k)).length;
   const levelAll = levelOn === levelKeys.length;
+  const learnedIn = (keys: string[]) => keys.filter((k) => progress[k] === "mastered").length;
 
   const crumbs: { label: string; to: PickerNav }[] = [{ label: "All cases", to: {} }];
   if (eoDef) crumbs.push({ label: eoDef.label, to: { eoCase: eoDef.id } });
@@ -639,7 +680,7 @@ function CasePicker({
           ))}
         </nav>
         <span className="picker-total">
-          {levelOn}/{levelKeys.length} selected
+          {learnedIn(levelKeys)}/{levelKeys.length} learned
         </span>
         <button type="button" className="text-button picker-all" onClick={() => toggleKeys(levelKeys)}>
           {levelAll ? "Select none" : "Select all"}
@@ -654,8 +695,12 @@ function CasePicker({
           const pct = successPct(total);
           const attempts = total.yes + total.no;
           const onRow = () => (r.drill ? setNav(r.drill) : toggleKeys(r.keys));
+          // A single case (no deeper level) gets its own learned marker;
+          // groups show how many cases inside are learned.
+          const leafKey = !r.drill && r.keys.length === 1 ? r.keys[0] : null;
+          const level = leafKey ? progress[leafKey] : undefined;
           return (
-            <li key={r.id} className={`picker-row ${state}`}>
+            <li key={r.id} className={`picker-row ${state} ${level ? `level-${level}` : ""}`}>
               <button
                 type="button"
                 className={`picker-check ${state}`}
@@ -670,8 +715,8 @@ function CasePicker({
                 <span className="picker-label">{r.label}</span>
                 <span className="picker-meta">
                   {r.keys.length > 1 && (
-                    <span className="picker-count">
-                      {on}/{r.keys.length} selected
+                    <span className={`picker-count ${learnedIn(r.keys) === r.keys.length ? "all-learned" : ""}`}>
+                      {learnedIn(r.keys)}/{r.keys.length} learned
                     </span>
                   )}
                   <span className={`picker-rate bld-rate-${rateTier(pct)}`}>
@@ -680,6 +725,17 @@ function CasePicker({
                 </span>
                 {r.drill && <span className="picker-chevron" aria-hidden="true">&#8250;</span>}
               </button>
+              {leafKey && (
+                <button
+                  type="button"
+                  className={`mastery-toggle picker-mastery level-${level ?? "none"}`}
+                  onClick={() => cycleMastery(leafKey)}
+                  title="Click to cycle: still learning → learned → flagged → none"
+                >
+                  <span className="mastery-check">{masterySymbol(level)}</span>
+                  <span>{level ? masteryLabel(level) : "Not learned"}</span>
+                </button>
+              )}
             </li>
           );
         })}
