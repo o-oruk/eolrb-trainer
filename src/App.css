@@ -1599,7 +1599,8 @@ button.picker-crumb:hover {
   flex: none;
   font-family: var(--mono);
   font-size: 12px;
-  color: var(--text);
+  font-weight: 600;
+  color: var(--text-h);
 }
 
 .picker-all {
