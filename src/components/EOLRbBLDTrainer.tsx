@@ -9,15 +9,7 @@ import {
   bldCaseForEnabled as caseForEnabled,
   bldParents,
 } from "../lib/EOLRbBLDCases";
-import {
-  loadBLDStats,
-  saveBLDStats,
-  recordAttempt,
-  totalStats,
-  type BLDCaseStats,
-  type BLDStatsState,
-} from "../lib/BLDStats";
-import { loadJSON, saveJSON } from "../lib/Storage";
+import { loadRepCount, saveRepCount } from "../lib/RepCount";
 import { loadProgress, saveProgress, nextMasteryLevel, masteryLabel, masterySymbol, type ProgressState } from "../lib/Progress";
 import { saveSelection } from "../lib/Selection";
 import { loadSettings, saveSettings, type Settings } from "../lib/Settings";
@@ -37,12 +29,6 @@ const SOLVED_FACELET = FaceletCube.from_cubie(new CubieCube());
 // can drill everything sighted but only a few cases blind.
 const NAMESPACE = "bld";
 
-// Running yes/no tally since the last reset -- the BLD page's equivalent of
-// the other pages' rep counter.
-const SESSION_KEY = "eolrb-trainer-bld-session-v1";
-
-type LastAttempt = { key: string; label: string; success: boolean };
-
 type EOLRbBLDTrainerProps = {
   pageTabs: ReactNode;
 };
@@ -52,10 +38,7 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
   const [current, setCurrent] = useState<EOLRbCase | null>(() => caseForEnabled(restoreEnabled(NAMESPACE)));
   const [revealed, setRevealed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [statsOpen, setStatsOpen] = useState(false);
-  const [stats, setStats] = useState<BLDStatsState>(() => loadBLDStats());
-  const [session, setSession] = useState<BLDCaseStats>(() => loadJSON(SESSION_KEY, { yes: 0, no: 0 }));
-  const [lastAttempt, setLastAttempt] = useState<LastAttempt | null>(null);
+  const [repCount, setRepCount] = useState<number>(() => loadRepCount(NAMESPACE));
   const [prefs, setPrefs] = useState<Settings>(() => loadSettings());
   // How well each BLD case is learned -- same four levels as the sighted
   // EOLRb trainer, tracked separately.
@@ -71,12 +54,8 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
   );
 
   useEffect(() => {
-    saveBLDStats(stats);
-  }, [stats]);
-
-  useEffect(() => {
-    saveJSON(SESSION_KEY, session);
-  }, [session]);
+    saveRepCount(NAMESPACE, repCount);
+  }, [repCount]);
 
   useEffect(() => {
     saveSelection(Array.from(enabled), NAMESPACE);
@@ -102,52 +81,19 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
 
   const currentKey = current ? comboKey({ eoCase: current.eoCase, subcase: current.subcase }) : null;
   const currentLabel = current ? caseLabel(current.eoCase, current.subcase) : null;
+  const currentLevel = currentKey ? progress[currentKey] : undefined;
 
   const next = (keys: Set<string> = enabled) => {
     setCurrent(caseForEnabled(keys));
     setRevealed(false);
   };
 
-  // Yes/No log an attempt and move straight on, without revealing.
-  const answer = (success: boolean) => {
-    if (!currentKey || !currentLabel) return;
-    setStats((s) => recordAttempt(s, currentKey, success));
-    setSession((s) => (success ? { ...s, yes: s.yes + 1 } : { ...s, no: s.no + 1 }));
-    setLastAttempt({ key: currentKey, label: currentLabel, success });
+  const nextRep = () => {
     next();
+    setRepCount((c) => c + 1);
   };
 
-  // Skipping doesn't count as having faced the case -- nothing is recorded.
-  const skip = () => next();
-
-  const undoLast = () => {
-    if (!lastAttempt) return;
-    const { key, success } = lastAttempt;
-    setStats((s) => recordAttempt(s, key, success, -1));
-    setSession((s) => (success ? { ...s, yes: Math.max(0, s.yes - 1) } : { ...s, no: Math.max(0, s.no - 1) }));
-    setLastAttempt(null);
-  };
-
-  const resetSession = () => setSession({ yes: 0, no: 0 });
-
-  const resetStats = () => {
-    if (!window.confirm("Clear all blindfolded stats for every case (and the session tally)? This can't be undone.")) return;
-    setStats({});
-    setSession({ yes: 0, no: 0 });
-    setLastAttempt(null);
-  };
-
-  // Wipes one case's record back to "never attempted". The session tally is
-  // left alone -- it's a running count, not tied to specific cases.
-  const clearCaseStats = (key: string, label: string) => {
-    if (!window.confirm(`Clear blindfolded stats for "${label}"? This can't be undone.`)) return;
-    setStats((s) => {
-      const next = { ...s };
-      delete next[key];
-      return next;
-    });
-    if (lastAttempt?.key === key) setLastAttempt(null);
-  };
+  const resetRepCount = () => setRepCount(0);
 
   // Turns a set of cases all on, or all off if they already are.
   const toggleKeys = (keys: string[]) => {
@@ -179,10 +125,9 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
     setPrefs((p) => ({ ...p, frontColor }));
   };
 
-  // Keyboard: Y/N log success/failure and advance, S skips. Space reveals
-  // the solutions; pressing it again once they're showing skips the case.
-  // C/A open case selection/stats (re-pressing closes), H toggles the cube,
-  // Escape closes any modal. Ignored while typing in a form control.
+  // Keyboard: space reveals the solutions, then moves to the next case. C
+  // opens case selection (re-pressing closes), H toggles the cube, Escape
+  // steps back in / closes the picker. Ignored while typing in a form control.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -191,7 +136,6 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
           return;
         }
         setSettingsOpen(false);
-        setStatsOpen(false);
         return;
       }
 
@@ -200,33 +144,19 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
       if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA" || target?.isContentEditable) return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
 
-      const modalOpen = settingsOpen || statsOpen;
+      const modalOpen = settingsOpen;
 
       if (e.code === "Space") {
         if (e.repeat) return;
         e.preventDefault();
         if (modalOpen || !current) return;
-        if (revealed) skip();
+        if (revealed) nextRep();
         else setRevealed(true);
-        return;
-      }
-
-      if (e.code === "KeyY" || e.code === "KeyN" || e.code === "KeyS") {
-        if (e.repeat || modalOpen || !current) return;
-        if (e.code === "KeyS") skip();
-        else answer(e.code === "KeyY");
         return;
       }
 
       if (e.code === "KeyC") {
         setSettingsOpen((v) => !v);
-        setStatsOpen(false);
-        return;
-      }
-
-      if (e.code === "KeyA") {
-        setStatsOpen((v) => !v);
-        setSettingsOpen(false);
         return;
       }
 
@@ -238,9 +168,6 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
     return () => window.removeEventListener("keydown", onKey);
   });
 
-  const overall = totalStats(stats, ALL_KEYS);
-  const overallAttempts = overall.yes + overall.no;
-  const triedCount = ALL_KEYS.filter((k) => stats[k]).length;
   const countLevel = (level: string) => ALL_KEYS.filter((k) => progress[k] === level).length;
   const masteredCount = countLevel("mastered");
   const masteredPct = Math.round((masteredCount / ALL_KEYS.length) * 100);
@@ -255,12 +182,8 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
         <div className="header-actions">
           {pageTabs}
           <div className="tab-divider" />
-          <button
-            className="settings-toggle pill-cases bld-cases-pill"
-            onClick={() => setSettingsOpen(true)}
-            title={`${enabled.size} of ${ALL_KEYS.length} cases selected for training`}
-          >
-            Cases: {enabled.size}/{ALL_KEYS.length}
+          <button className="settings-toggle pill-cases" onClick={() => setSettingsOpen(true)}>
+            Cases: {enabled.size}/{ALL_KEYS.length} selected
             <span className="chevron">&#9662;</span>
           </button>
           <button
@@ -288,19 +211,16 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
             {prefs.showCube ? "Hide cube" : "Show cube"}
           </button>
           <div className="rep-counter">
-            <span className="settings-toggle rep-pill bld-session-pill">
-              Session:
-              <span className="bld-session-yes">{session.yes}✓</span>
-              <span className="bld-session-no">{session.no}✗</span>
+            <span className="settings-toggle rep-pill">
+              Reps: <span className="rep-count-value">{repCount}</span>
             </span>
-            <button className="rep-reset" onClick={resetSession} aria-label="Reset session tally" title="Reset session tally">
+            <button className="rep-reset" onClick={resetRepCount} aria-label="Reset rep counter" title="Reset rep counter">
               &#8635;
             </button>
           </div>
         </div>
         <p className="keybind-hint">
-          y: success &nbsp;·&nbsp; n: fail &nbsp;·&nbsp; s: skip &nbsp;·&nbsp; space: reveal, again to skip &nbsp;·&nbsp; c:
-          cases &nbsp;·&nbsp; a: stats &nbsp;·&nbsp; h: hide cube
+          space: reveal / next case &nbsp;·&nbsp; c: cases &nbsp;·&nbsp; h: hide cube
         </p>
       </header>
 
@@ -345,17 +265,6 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
               <div className="card">
                 <div className="card-label">Case</div>
                 <div className="case-name">{currentLabel}</div>
-                {currentKey && <CaseRecord stats={stats[currentKey]} />}
-                {currentKey && (
-                  <button
-                    type="button"
-                    className={`mastery-toggle bld-case-mastery level-${progress[currentKey] ?? "none"}`}
-                    onClick={() => cycleMastery(currentKey)}
-                  >
-                    <span className="mastery-check">{masterySymbol(progress[currentKey])}</span>
-                    <span>{masteryLabel(progress[currentKey])}</span>
-                  </button>
-                )}
               </div>
 
               <div className="card">
@@ -398,11 +307,10 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
                     </li>
                   ))}
                 </ol>
-                <p className="solutions-placeholder">Space again to skip this case.</p>
               </>
             ) : (
               <p className="solutions-placeholder">
-                Hidden while you solve blind. Press space to peek; pressing it again skips the case.
+                Hidden while you solve blind. Press space to reveal; press it again for the next case.
               </p>
             )}
           </div>
@@ -410,36 +318,24 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
       </main>
 
       {current && (
-        <div className="bld-answer-row">
-          <div className="bld-answer-card">
-            <span className="bld-answer-prompt">Success?</span>
-            <div className="bld-answer-buttons">
-              <button type="button" className="bld-answer yes" onClick={() => answer(true)}>
-                Yes <kbd>Y</kbd>
-              </button>
-              <button type="button" className="bld-answer no" onClick={() => answer(false)}>
-                No <kbd>N</kbd>
-              </button>
-              <button type="button" className="bld-answer skip" onClick={skip}>
-                Skip <kbd>S</kbd>
-              </button>
-            </div>
-          </div>
-          <div className={`bld-last ${lastAttempt ? (lastAttempt.success ? "yes" : "no") : ""}`}>
-            {lastAttempt ? (
-              <>
-                <span className="bld-last-mark">{lastAttempt.success ? "✓" : "✗"}</span>
-                <span className="bld-last-label">
-                  Logged {lastAttempt.success ? "success" : "fail"}: {lastAttempt.label}
-                </span>
-                <button type="button" className="text-button" onClick={undoLast}>
-                  Undo
-                </button>
-              </>
-            ) : (
-              <span className="bld-last-label">Scramble your cube, put the blindfold on, and solve.</span>
-            )}
-          </div>
+        <div className="action-row bld-action-row">
+          <button
+            type="button"
+            className={`mastery-toggle level-${currentLevel ?? "none"}`}
+            onClick={() => cycleMastery(currentKey!)}
+          >
+            <span className="mastery-check">{masterySymbol(currentLevel)}</span>
+            <span>{masteryLabel(currentLevel)}</span>
+          </button>
+          {!revealed ? (
+            <button className="primary action-primary" onClick={() => setRevealed(true)}>
+              Reveal solutions
+            </button>
+          ) : (
+            <button className="primary action-primary" onClick={nextRep}>
+              Next case
+            </button>
+          )}
         </div>
       )}
 
@@ -456,7 +352,6 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
               nav={nav}
               setNav={setNav}
               enabled={enabled}
-              stats={stats}
               progress={progress}
               cycleMastery={cycleMastery}
               toggleKeys={toggleKeys}
@@ -470,104 +365,6 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
         </div>
       )}
 
-      {statsOpen && (
-        <div className="modal-backdrop" onClick={() => setStatsOpen(false)}>
-          <div className="modal-panel bld-stats-panel" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Blindfolded stats</h2>
-              <button className="modal-close" onClick={() => setStatsOpen(false)} aria-label="Close">
-                &times;
-              </button>
-            </div>
-            <div className="modal-body">
-              <div className="bld-summary">
-                <div className="bld-summary-tile">
-                  <span className="bld-summary-value">{overallAttempts}</span>
-                  <span className="bld-summary-label">Attempts</span>
-                </div>
-                <div className="bld-summary-tile yes">
-                  <span className="bld-summary-value">{overall.yes}</span>
-                  <span className="bld-summary-label">Success</span>
-                </div>
-                <div className="bld-summary-tile no">
-                  <span className="bld-summary-value">{overall.no}</span>
-                  <span className="bld-summary-label">Fail</span>
-                </div>
-              </div>
-              <div className="bld-summary-sub">
-                <span>
-                  {triedCount}/{ALL_KEYS.length} cases attempted
-                </span>
-              </div>
-
-              {BLD_CASES.map((c) => {
-                const keys = c.subcases.map((s) => comboKey({ eoCase: c.id, subcase: s.id }));
-                const group = totalStats(stats, keys);
-                return (
-                  <div key={c.id} className="eo-case-group">
-                    <div className="eo-case-header progress-header">
-                      <span>{c.label}</span>
-                      <span className="case-count">
-                        {group.yes + group.no > 0 ? `${group.yes}✓ ${group.no}✗` : "—"}
-                      </span>
-                    </div>
-                    <div className="bld-table" role="table">
-                      <div className="bld-row bld-row-head" role="row">
-                        <span role="columnheader">Case</span>
-                        <span role="columnheader">Tries</span>
-                        <span role="columnheader">Yes</span>
-                        <span role="columnheader">No</span>
-                        <span role="columnheader" aria-label="Clear" />
-                      </div>
-                      {c.subcases.map((s, si) => {
-                        const key = comboKey({ eoCase: c.id, subcase: s.id });
-                        const st = stats[key];
-                        const startsGroup = s.group && s.group !== c.subcases[si - 1]?.group;
-                        return (
-                          <Fragment key={key}>
-                            {startsGroup && (
-                              <div className="bld-row bld-group-row" role="row">
-                                <span role="cell">{s.group}</span>
-                              </div>
-                            )}
-                            <div className={`bld-row ${st ? "" : "untried"} ${s.group ? "grouped" : ""}`} role="row">
-                              <span className="bld-case" role="cell">{s.label}</span>
-                              <span className="bld-num" role="cell">{st ? st.yes + st.no : "—"}</span>
-                              <span className="bld-num yes" role="cell">{st ? st.yes : "—"}</span>
-                              <span className="bld-num no" role="cell">{st ? st.no : "—"}</span>
-                              <span role="cell">
-                                {st && (
-                                  <button
-                                    type="button"
-                                    className="bld-row-clear"
-                                    onClick={() => clearCaseStats(key, caseLabel(c.id, s.id))}
-                                    aria-label={`Clear stats for ${s.label}`}
-                                    title="Clear this case's stats"
-                                  >
-                                    &times;
-                                  </button>
-                                )}
-                              </span>
-                            </div>
-                          </Fragment>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="modal-footer progress-footer">
-              <button type="button" className="bld-clear-button" onClick={resetStats} disabled={overallAttempts === 0}>
-                Clear all stats
-              </button>
-              <button className="primary" onClick={() => setStatsOpen(false)}>
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -589,7 +386,6 @@ function CasePicker({
   nav,
   setNav,
   enabled,
-  stats,
   progress,
   cycleMastery,
   toggleKeys,
@@ -597,7 +393,6 @@ function CasePicker({
   nav: PickerNav;
   setNav: (n: PickerNav) => void;
   enabled: Set<string>;
-  stats: BLDStatsState;
   progress: ProgressState;
   cycleMastery: (key: string) => void;
   toggleKeys: (keys: string[]) => void;
@@ -715,17 +510,6 @@ function CasePicker({
           );
         })}
       </ul>
-    </div>
-  );
-}
-
-// Compact "your record on this case" line under the case name.
-function CaseRecord({ stats }: { stats: BLDCaseStats | undefined }) {
-  if (!stats) return <div className="bld-case-record untried">First blind attempt at this case</div>;
-  return (
-    <div className="bld-case-record">
-      <span className="yes">{stats.yes}✓</span>
-      <span className="no">{stats.no}✗</span>
     </div>
   );
 }
