@@ -277,8 +277,12 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
         <div className="header-actions">
           {pageTabs}
           <div className="tab-divider" />
-          <button className="settings-toggle pill-cases" onClick={() => setSettingsOpen(true)}>
-            Cases: {enabled.size}/{ALL_KEYS.length} selected
+          <button
+            className="settings-toggle pill-cases bld-cases-pill"
+            onClick={() => setSettingsOpen(true)}
+            title={`${enabled.size} of ${ALL_KEYS.length} cases selected for training`}
+          >
+            Cases: {enabled.size}/{ALL_KEYS.length}
             <span className="chevron">&#9662;</span>
           </button>
           <button
@@ -302,7 +306,7 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
             Progress: {masteredCount}/{ALL_KEYS.length}
             <span className="chevron">&#9662;</span>
           </button>
-          <button className="settings-toggle progress-pill" onClick={() => setStatsOpen(true)}>
+          <button className="settings-toggle progress-pill bld-stats-pill" onClick={() => setStatsOpen(true)}>
             <span
               className="progress-pill-dot"
               style={
@@ -320,7 +324,7 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
             {prefs.showCube ? "Hide cube" : "Show cube"}
           </button>
           <div className="rep-counter">
-            <span className="settings-toggle rep-pill">
+            <span className="settings-toggle rep-pill bld-session-pill">
               Session:
               <span className="bld-session-yes">{session.yes}✓</span>
               <span className="bld-session-no">{session.no}✗</span>

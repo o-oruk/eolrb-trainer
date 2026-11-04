@@ -1762,3 +1762,18 @@ button.picker-crumb:hover {
 .bld-row.grouped .bld-case {
   padding-left: 14px;
 }
+
+/* The BLD header carries one more pill (Progress) than the other pages;
+   its Stats and Session pills are trimmed so the row still fits on one
+   line. Still fixed widths so they don't jitter as the numbers change. */
+.header-actions .progress-pill.bld-stats-pill {
+  width: 124px;
+}
+
+.header-actions .rep-pill.bld-session-pill {
+  width: 164px;
+}
+
+.header-actions .pill-cases.bld-cases-pill {
+  width: 128px;
+}
