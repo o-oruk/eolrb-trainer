@@ -263,6 +263,11 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
   const overallAttempts = overall.yes + overall.no;
   const triedCount = ALL_KEYS.filter((k) => stats[k]).length;
   const sessionPct = successPct(session);
+  const countLevel = (level: string) => ALL_KEYS.filter((k) => progress[k] === level).length;
+  const masteredCount = countLevel("mastered");
+  const masteredPct = Math.round((masteredCount / ALL_KEYS.length) * 100);
+  const learningPct = Math.round((countLevel("learning") / ALL_KEYS.length) * 100);
+  const flaggedPct = Math.round((countLevel("flagged") / ALL_KEYS.length) * 100);
 
   return (
     <div id="page">
@@ -274,6 +279,27 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
           <div className="tab-divider" />
           <button className="settings-toggle pill-cases" onClick={() => setSettingsOpen(true)}>
             Cases: {enabled.size}/{ALL_KEYS.length} selected
+            <span className="chevron">&#9662;</span>
+          </button>
+          <button
+            className="settings-toggle progress-pill"
+            onClick={() => {
+              setNav({});
+              setSettingsOpen(true);
+            }}
+            title="Mark learned cases in the case picker"
+          >
+            <span
+              className="progress-pill-dot"
+              style={
+                {
+                  "--pct-m": `${masteredPct}%`,
+                  "--pct-l": `${masteredPct + learningPct}%`,
+                  "--pct-f": `${masteredPct + learningPct + flaggedPct}%`,
+                } as CSSProperties
+              }
+            />
+            Progress: {masteredCount}/{ALL_KEYS.length}
             <span className="chevron">&#9662;</span>
           </button>
           <button className="settings-toggle progress-pill" onClick={() => setStatsOpen(true)}>
