@@ -1300,7 +1300,7 @@ main {
 
 .bld-summary {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 10px;
 }
 
@@ -1393,7 +1393,7 @@ main {
 
 .bld-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 52px 44px 44px 120px 24px;
+  grid-template-columns: minmax(0, 1fr) 52px 44px 44px 24px;
   align-items: center;
   gap: 10px;
   padding: 7px 8px;
@@ -1508,11 +1508,8 @@ main {
   .bld-answer {
     width: 90px;
   }
-  .bld-summary {
-    grid-template-columns: repeat(2, 1fr);
-  }
   .bld-row {
-    grid-template-columns: minmax(0, 1fr) 30px 24px 24px 48px 22px;
+    grid-template-columns: minmax(0, 1fr) 30px 24px 24px 22px;
     gap: 6px;
     padding: 7px 4px;
     font-size: 13px;
@@ -1763,13 +1760,7 @@ button.picker-crumb:hover {
   padding-left: 14px;
 }
 
-/* The BLD header carries one more pill (Progress) than the other pages;
-   its Stats and Session pills are trimmed so the row still fits on one
-   line. Still fixed widths so they don't jitter as the numbers change. */
-.header-actions .progress-pill.bld-stats-pill {
-  width: 124px;
-}
-
+/* BLD Session pill: fixed width so it doesn't jitter as the counts change. */
 .header-actions .rep-pill.bld-session-pill {
   width: 164px;
 }

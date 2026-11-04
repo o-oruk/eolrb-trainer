@@ -14,8 +14,6 @@ import {
   saveBLDStats,
   recordAttempt,
   totalStats,
-  successPct,
-  rateTier,
   type BLDCaseStats,
   type BLDStatsState,
 } from "../lib/BLDStats";
@@ -44,24 +42,6 @@ const NAMESPACE = "bld";
 const SESSION_KEY = "eolrb-trainer-bld-session-v1";
 
 type LastAttempt = { key: string; label: string; success: boolean };
-
-function pctText(pct: number | null): string {
-  return pct === null ? "—" : `${pct}%`;
-}
-
-// Success/fail split bar: green for yes, red for no, empty track when the
-// case hasn't been attempted.
-function RateBar({ stats, className }: { stats: BLDCaseStats; className: string }) {
-  const total = stats.yes + stats.no;
-  const yesPct = total ? (stats.yes / total) * 100 : 0;
-  const noPct = total ? (stats.no / total) * 100 : 0;
-  return (
-    <div className={className}>
-      <div className="bld-bar-fill yes" style={{ width: `${yesPct}%` }} />
-      <div className="bld-bar-fill no" style={{ width: `${noPct}%` }} />
-    </div>
-  );
-}
 
 type EOLRbBLDTrainerProps = {
   pageTabs: ReactNode;
@@ -259,10 +239,8 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
   });
 
   const overall = totalStats(stats, ALL_KEYS);
-  const overallPct = successPct(overall);
   const overallAttempts = overall.yes + overall.no;
   const triedCount = ALL_KEYS.filter((k) => stats[k]).length;
-  const sessionPct = successPct(session);
   const countLevel = (level: string) => ALL_KEYS.filter((k) => progress[k] === level).length;
   const masteredCount = countLevel("mastered");
   const masteredPct = Math.round((masteredCount / ALL_KEYS.length) * 100);
@@ -306,20 +284,6 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
             Progress: {masteredCount}/{ALL_KEYS.length}
             <span className="chevron">&#9662;</span>
           </button>
-          <button className="settings-toggle progress-pill bld-stats-pill" onClick={() => setStatsOpen(true)}>
-            <span
-              className="progress-pill-dot"
-              style={
-                {
-                  "--pct-m": `${overallAttempts ? (overall.yes / overallAttempts) * 100 : 0}%`,
-                  "--pct-l": `${overallAttempts ? (overall.yes / overallAttempts) * 100 : 0}%`,
-                  "--pct-f": `${overallAttempts ? 100 : 0}%`,
-                } as CSSProperties
-              }
-            />
-            Stats: {pctText(overallPct)}
-            <span className="chevron">&#9662;</span>
-          </button>
           <button className="settings-toggle pill-cube" onClick={toggleShowCube}>
             {prefs.showCube ? "Hide cube" : "Show cube"}
           </button>
@@ -328,7 +292,6 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
               Session:
               <span className="bld-session-yes">{session.yes}✓</span>
               <span className="bld-session-no">{session.no}✗</span>
-              {sessionPct !== null && <span className="rep-count-value">{sessionPct}%</span>}
             </span>
             <button className="rep-reset" onClick={resetSession} aria-label="Reset session tally" title="Reset session tally">
               &#8635;
@@ -530,13 +493,8 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
                   <span className="bld-summary-value">{overall.no}</span>
                   <span className="bld-summary-label">Fail</span>
                 </div>
-                <div className={`bld-summary-tile rate bld-rate-${rateTier(overallPct)}`}>
-                  <span className="bld-summary-value">{pctText(overallPct)}</span>
-                  <span className="bld-summary-label">Success rate</span>
-                </div>
               </div>
               <div className="bld-summary-sub">
-                <RateBar stats={overall} className="progress-bar-track" />
                 <span>
                   {triedCount}/{ALL_KEYS.length} cases attempted
                 </span>
@@ -545,13 +503,12 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
               {BLD_CASES.map((c) => {
                 const keys = c.subcases.map((s) => comboKey({ eoCase: c.id, subcase: s.id }));
                 const group = totalStats(stats, keys);
-                const groupPct = successPct(group);
                 return (
                   <div key={c.id} className="eo-case-group">
                     <div className="eo-case-header progress-header">
                       <span>{c.label}</span>
-                      <span className={`case-count bld-rate-${rateTier(groupPct)}`}>
-                        {group.yes + group.no > 0 ? `${group.yes}/${group.yes + group.no} · ${groupPct}%` : "—"}
+                      <span className="case-count">
+                        {group.yes + group.no > 0 ? `${group.yes}✓ ${group.no}✗` : "—"}
                       </span>
                     </div>
                     <div className="bld-table" role="table">
@@ -560,14 +517,12 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
                         <span role="columnheader">Tries</span>
                         <span role="columnheader">Yes</span>
                         <span role="columnheader">No</span>
-                        <span role="columnheader">Success</span>
                         <span role="columnheader" aria-label="Clear" />
                       </div>
                       {c.subcases.map((s, si) => {
                         const key = comboKey({ eoCase: c.id, subcase: s.id });
                         const st = stats[key];
                         const startsGroup = s.group && s.group !== c.subcases[si - 1]?.group;
-                        const pct = st ? successPct(st) : null;
                         return (
                           <Fragment key={key}>
                             {startsGroup && (
@@ -580,10 +535,6 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
                               <span className="bld-num" role="cell">{st ? st.yes + st.no : "—"}</span>
                               <span className="bld-num yes" role="cell">{st ? st.yes : "—"}</span>
                               <span className="bld-num no" role="cell">{st ? st.no : "—"}</span>
-                              <span className="bld-rate-cell" role="cell">
-                                <span className={`bld-rate-text bld-rate-${rateTier(pct)}`}>{pctText(pct)}</span>
-                                <RateBar stats={st ?? { yes: 0, no: 0 }} className="mini-bar-track bld-mini-bar" />
-                              </span>
                               <span role="cell">
                                 {st && (
                                   <button
@@ -721,9 +672,6 @@ function CasePicker({
         {rows.map((r) => {
           const on = r.keys.filter((k) => enabled.has(k)).length;
           const state = on === 0 ? "off" : on === r.keys.length ? "on" : "partial";
-          const total = totalStats(stats, r.keys);
-          const pct = successPct(total);
-          const attempts = total.yes + total.no;
           const onRow = () => (r.drill ? setNav(r.drill) : toggleKeys(r.keys));
           // A single case (no deeper level) gets its own learned marker;
           // groups show how many cases inside are learned.
@@ -749,9 +697,6 @@ function CasePicker({
                       {learnedIn(r.keys)}/{r.keys.length} learned
                     </span>
                   )}
-                  <span className={`picker-rate bld-rate-${rateTier(pct)}`}>
-                    {attempts ? `${pct}% · ${attempts} tries` : "not tried"}
-                  </span>
                 </span>
                 {r.drill && <span className="picker-chevron" aria-hidden="true">&#8250;</span>}
               </button>
@@ -777,12 +722,10 @@ function CasePicker({
 // Compact "your record on this case" line under the case name.
 function CaseRecord({ stats }: { stats: BLDCaseStats | undefined }) {
   if (!stats) return <div className="bld-case-record untried">First blind attempt at this case</div>;
-  const pct = successPct(stats);
   return (
     <div className="bld-case-record">
       <span className="yes">{stats.yes}✓</span>
       <span className="no">{stats.no}✗</span>
-      <span className={`bld-rate-${rateTier(pct)}`}>{pctText(pct)} blind</span>
     </div>
   );
 }
