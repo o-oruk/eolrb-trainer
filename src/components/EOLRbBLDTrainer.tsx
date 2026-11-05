@@ -10,7 +10,7 @@ import {
   bldParents,
 } from "../lib/EOLRbBLDCases";
 import { loadRepCount, saveRepCount } from "../lib/RepCount";
-import { loadProgress, saveProgress, nextMasteryLevel, masteryLabel, masterySymbol, type ProgressState } from "../lib/Progress";
+import { loadProgress, saveProgress, nextMasteryLevel, masteryLabel, masterySymbol, isLearned, type ProgressState } from "../lib/Progress";
 import { saveSelection } from "../lib/Selection";
 import { loadSettings, saveSettings, type Settings } from "../lib/Settings";
 import { colorSchemeFor, validFrontsFor, COLOR_LETTERS, COLOR_NAMES, type ColorLetter } from "../lib/ColorScheme";
@@ -170,6 +170,7 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
 
   const countLevel = (level: string) => ALL_KEYS.filter((k) => progress[k] === level).length;
   const masteredCount = countLevel("mastered");
+  const learnedCount = ALL_KEYS.filter((k) => isLearned(progress[k])).length;
   const masteredPct = Math.round((masteredCount / ALL_KEYS.length) * 100);
   const learningPct = Math.round((countLevel("learning") / ALL_KEYS.length) * 100);
   const flaggedPct = Math.round((countLevel("flagged") / ALL_KEYS.length) * 100);
@@ -192,7 +193,7 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
               setNav({});
               setSettingsOpen(true);
             }}
-            title="Mark learned cases in the case picker"
+            title={`${learnedCount} learned (${masteredCount} mastered) -- mark cases in the case picker`}
           >
             <span
               className="progress-pill-dot"
@@ -204,7 +205,7 @@ function EOLRbBLDTrainer({ pageTabs }: EOLRbBLDTrainerProps) {
                 } as CSSProperties
               }
             />
-            Progress: {masteredCount}/{ALL_KEYS.length}
+            Learned: {learnedCount}/{ALL_KEYS.length}
             <span className="chevron">&#9662;</span>
           </button>
           <button className="settings-toggle pill-cube" onClick={toggleShowCube}>
@@ -421,7 +422,8 @@ function CasePicker({
   const levelKeys = rows.flatMap((r) => r.keys);
   const levelOn = levelKeys.filter((k) => enabled.has(k)).length;
   const levelAll = levelOn === levelKeys.length;
-  const learnedIn = (keys: string[]) => keys.filter((k) => progress[k] === "mastered").length;
+  const learnedIn = (keys: string[]) => keys.filter((k) => isLearned(progress[k])).length;
+  const allMastered = (keys: string[]) => keys.every((k) => progress[k] === "mastered");
 
   const crumbs: { label: string; to: PickerNav }[] = [{ label: "All cases", to: {} }];
   if (eoDef) crumbs.push({ label: eoDef.label, to: { eoCase: eoDef.id } });
@@ -488,7 +490,7 @@ function CasePicker({
                 <span className="picker-label">{r.label}</span>
                 <span className="picker-meta">
                   {r.keys.length > 1 && (
-                    <span className={`picker-count ${learnedIn(r.keys) === r.keys.length ? "all-learned" : ""}`}>
+                    <span className={`picker-count ${allMastered(r.keys) ? "all-learned" : ""}`}>
                       {learnedIn(r.keys)}/{r.keys.length} learned
                     </span>
                   )}
@@ -500,7 +502,7 @@ function CasePicker({
                   type="button"
                   className={`mastery-toggle picker-mastery level-${level ?? "none"}`}
                   onClick={() => cycleMastery(leafKey)}
-                  title="Click to cycle: still learning → learned → flagged → none"
+                  title="Click to cycle: still learning → mastered → flagged → none"
                 >
                   <span className="mastery-check">{masterySymbol(level)}</span>
                   <span>{level ? masteryLabel(level) : "Not learned"}</span>

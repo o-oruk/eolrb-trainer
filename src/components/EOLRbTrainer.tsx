@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { EO_CASES, type EOLRbCase, type EOCaseId } from "../lib/EOLRbGenerator";
 import { comboKey, ALL_KEYS, caseLabel, restoreEnabled, caseForEnabled } from "../lib/EOLRbCombos";
-import { loadProgress, saveProgress, nextMasteryLevel, masteryLabel, masterySymbol, type ProgressState } from "../lib/Progress";
+import { loadProgress, saveProgress, nextMasteryLevel, masteryLabel, masterySymbol, isLearned, type ProgressState } from "../lib/Progress";
 import { loadRepCount, saveRepCount } from "../lib/RepCount";
 import { loadNotes, saveNotes, type NotesState } from "../lib/Notes";
 import { saveSelection } from "../lib/Selection";
@@ -204,7 +204,9 @@ function EOLRbTrainer({ pageTabs }: EOLRbTrainerProps) {
   const masteredCount = ALL_KEYS.filter((k) => progress[k] === "mastered").length;
   const learningCount = ALL_KEYS.filter((k) => progress[k] === "learning").length;
   const flaggedCount = ALL_KEYS.filter((k) => progress[k] === "flagged").length;
+  const learnedCount = ALL_KEYS.filter((k) => isLearned(progress[k])).length;
   const masteredPct = Math.round((masteredCount / ALL_KEYS.length) * 100);
+  const learnedPct = Math.round((learnedCount / ALL_KEYS.length) * 100);
   const learningPct = Math.round((learningCount / ALL_KEYS.length) * 100);
   const flaggedPct = Math.round((flaggedCount / ALL_KEYS.length) * 100);
 
@@ -220,9 +222,9 @@ function EOLRbTrainer({ pageTabs }: EOLRbTrainerProps) {
             Cases: {enabled.size}/{ALL_KEYS.length} selected
             <span className="chevron">&#9662;</span>
           </button>
-          <button className="settings-toggle progress-pill" onClick={() => setProgressOpen(true)}>
+          <button className="settings-toggle progress-pill" onClick={() => setProgressOpen(true)} title={`${learnedCount} learned (${masteredCount} mastered)`}>
             <span className="progress-pill-dot" style={{ "--pct-m": `${masteredPct}%`, "--pct-l": `${masteredPct + learningPct}%`, "--pct-f": `${masteredPct + learningPct + flaggedPct}%` } as CSSProperties} />
-            Progress: {masteredCount}/{ALL_KEYS.length}
+            Learned: {learnedCount}/{ALL_KEYS.length}
             <span className="chevron">&#9662;</span>
           </button>
           <button className="settings-toggle pill-cube" onClick={toggleShowCube}>
@@ -445,16 +447,17 @@ function EOLRbTrainer({ pageTabs }: EOLRbTrainerProps) {
             <div className="modal-body">
               <div className={`overall-progress ${masteredPct >= 100 ? "complete" : ""}`}>
                 <div className="overall-progress-top">
-                  <span className="overall-progress-count">{masteredCount}/{ALL_KEYS.length} learned</span>
-                  <span className="overall-progress-pct">{masteredPct}%</span>
+                  <span className="overall-progress-count">{learnedCount}/{ALL_KEYS.length} learned</span>
+                  <span className="overall-progress-pct">{learnedPct}%</span>
                 </div>
                 <div className="progress-bar-track">
                   <div className="progress-bar-fill mastered" style={{ width: `${masteredPct}%` }} />
                   <div className="progress-bar-fill learning" style={{ width: `${learningPct}%` }} />
                   <div className="progress-bar-fill flagged" style={{ width: `${flaggedPct}%` }} />
                 </div>
+                <div className="overall-progress-sub">{masteredCount} mastered</div>
                 {learningCount > 0 && (
-                  <div className="overall-progress-sub">{learningCount} still in progress</div>
+                  <div className="overall-progress-sub">{learningCount} still learning</div>
                 )}
                 {flaggedCount > 0 && (
                   <div className="overall-progress-sub flagged">{flaggedCount} flagged</div>
@@ -466,6 +469,7 @@ function EOLRbTrainer({ pageTabs }: EOLRbTrainerProps) {
                 const caseMastered = keys.filter((k) => progress[k] === "mastered").length;
                 const caseLearning = keys.filter((k) => progress[k] === "learning").length;
                 const caseFlagged = keys.filter((k) => progress[k] === "flagged").length;
+                const caseLearned = caseMastered + caseLearning + caseFlagged;
                 const caseMasteredPct = Math.round((caseMastered / keys.length) * 100);
                 const caseLearningPct = Math.round((caseLearning / keys.length) * 100);
                 const caseFlaggedPct = Math.round((caseFlagged / keys.length) * 100);
@@ -474,7 +478,7 @@ function EOLRbTrainer({ pageTabs }: EOLRbTrainerProps) {
                     <div className="eo-case-header progress-header">
                       <span>{c.label}</span>
                       <span className={`case-count ${caseMasteredPct >= 100 ? "done" : ""}`}>
-                        {caseMastered}/{keys.length} {caseMasteredPct >= 100 && "✓"}
+                        {caseLearned}/{keys.length} {caseMasteredPct >= 100 && "✓"}
                       </span>
                     </div>
                     <div className="mini-bar-track">

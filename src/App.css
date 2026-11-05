@@ -731,7 +731,7 @@ main {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  /* Fixed width so "Mark progress" / "Still learning" / "Learned" / "Flagged" render at
+  /* Fixed width so "Mark progress" / "Still learning" / "Mastered" / "Flagged" render at
      the same size instead of the button resizing with its label. */
   width: 180px;
   padding: 10px 14px;

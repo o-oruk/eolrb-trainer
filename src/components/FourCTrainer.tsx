@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { FOUR_C_CATEGORIES, ALL_CASES, allCaseIds, type FourCCase, type FourCCategoryId } from "../lib/FourCGenerator";
-import { loadProgress, saveProgress, nextMasteryLevel, masteryLabel, masterySymbol, type ProgressState } from "../lib/Progress";
+import { loadProgress, saveProgress, nextMasteryLevel, masteryLabel, masterySymbol, isLearned, type ProgressState } from "../lib/Progress";
 import { loadRepCount, saveRepCount } from "../lib/RepCount";
 import { loadNotes, saveNotes, type NotesState } from "../lib/Notes";
 import { loadSelection, saveSelection } from "../lib/Selection";
@@ -220,7 +220,9 @@ function FourCTrainer({ generateCase, pageId, namespace, title, subtitle, pageTa
   const masteredCount = ALL_IDS.filter((id) => progress[id] === "mastered").length;
   const learningCount = ALL_IDS.filter((id) => progress[id] === "learning").length;
   const flaggedCount = ALL_IDS.filter((id) => progress[id] === "flagged").length;
+  const learnedCount = ALL_IDS.filter((id) => isLearned(progress[id])).length;
   const masteredPct = Math.round((masteredCount / ALL_IDS.length) * 100);
+  const learnedPct = Math.round((learnedCount / ALL_IDS.length) * 100);
   const learningPct = Math.round((learningCount / ALL_IDS.length) * 100);
   const flaggedPct = Math.round((flaggedCount / ALL_IDS.length) * 100);
 
@@ -236,9 +238,9 @@ function FourCTrainer({ generateCase, pageId, namespace, title, subtitle, pageTa
             Cases: {enabled.size}/{ALL_IDS.length} selected
             <span className="chevron">&#9662;</span>
           </button>
-          <button className="settings-toggle progress-pill" onClick={() => setProgressOpen(true)}>
+          <button className="settings-toggle progress-pill" onClick={() => setProgressOpen(true)} title={`${learnedCount} learned (${masteredCount} mastered)`}>
             <span className="progress-pill-dot" style={{ "--pct-m": `${masteredPct}%`, "--pct-l": `${masteredPct + learningPct}%`, "--pct-f": `${masteredPct + learningPct + flaggedPct}%` } as CSSProperties} />
-            Progress: {masteredCount}/{ALL_IDS.length}
+            Learned: {learnedCount}/{ALL_IDS.length}
             <span className="chevron">&#9662;</span>
           </button>
           <button className="settings-toggle pill-cube" onClick={toggleShowCube}>
@@ -460,16 +462,17 @@ function FourCTrainer({ generateCase, pageId, namespace, title, subtitle, pageTa
             <div className="modal-body">
               <div className={`overall-progress ${masteredPct >= 100 ? "complete" : ""}`}>
                 <div className="overall-progress-top">
-                  <span className="overall-progress-count">{masteredCount}/{ALL_IDS.length} learned</span>
-                  <span className="overall-progress-pct">{masteredPct}%</span>
+                  <span className="overall-progress-count">{learnedCount}/{ALL_IDS.length} learned</span>
+                  <span className="overall-progress-pct">{learnedPct}%</span>
                 </div>
                 <div className="progress-bar-track">
                   <div className="progress-bar-fill mastered" style={{ width: `${masteredPct}%` }} />
                   <div className="progress-bar-fill learning" style={{ width: `${learningPct}%` }} />
                   <div className="progress-bar-fill flagged" style={{ width: `${flaggedPct}%` }} />
                 </div>
+                <div className="overall-progress-sub">{masteredCount} mastered</div>
                 {learningCount > 0 && (
-                  <div className="overall-progress-sub">{learningCount} still in progress</div>
+                  <div className="overall-progress-sub">{learningCount} still learning</div>
                 )}
                 {flaggedCount > 0 && (
                   <div className="overall-progress-sub flagged">{flaggedCount} flagged</div>
@@ -481,6 +484,7 @@ function FourCTrainer({ generateCase, pageId, namespace, title, subtitle, pageTa
                 const caseMastered = ids.filter((id) => progress[id] === "mastered").length;
                 const caseLearning = ids.filter((id) => progress[id] === "learning").length;
                 const caseFlagged = ids.filter((id) => progress[id] === "flagged").length;
+                const caseLearned = caseMastered + caseLearning + caseFlagged;
                 const caseMasteredPct = Math.round((caseMastered / ids.length) * 100);
                 const caseLearningPct = Math.round((caseLearning / ids.length) * 100);
                 const caseFlaggedPct = Math.round((caseFlagged / ids.length) * 100);
@@ -489,7 +493,7 @@ function FourCTrainer({ generateCase, pageId, namespace, title, subtitle, pageTa
                     <div className="eo-case-header progress-header">
                       <span>{cat.label}</span>
                       <span className={`case-count ${caseMasteredPct >= 100 ? "done" : ""}`}>
-                        {caseMastered}/{ids.length} {caseMasteredPct >= 100 && "✓"}
+                        {caseLearned}/{ids.length} {caseMasteredPct >= 100 && "✓"}
                       </span>
                     </div>
                     <div className="mini-bar-track">
