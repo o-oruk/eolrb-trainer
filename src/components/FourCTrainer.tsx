@@ -484,7 +484,7 @@ function FourCTrainer({ generateCase, pageId, namespace, title, subtitle, pageTa
                 const caseMastered = ids.filter((id) => progress[id] === "mastered").length;
                 const caseLearning = ids.filter((id) => progress[id] === "learning").length;
                 const caseFlagged = ids.filter((id) => progress[id] === "flagged").length;
-                const caseLearned = caseMastered + caseLearning + caseFlagged;
+                const caseLearned = caseMastered + caseLearning;
                 const caseMasteredPct = Math.round((caseMastered / ids.length) * 100);
                 const caseLearningPct = Math.round((caseLearning / ids.length) * 100);
                 const caseFlaggedPct = Math.round((caseFlagged / ids.length) * 100);

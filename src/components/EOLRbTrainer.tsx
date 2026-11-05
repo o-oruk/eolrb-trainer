@@ -469,7 +469,7 @@ function EOLRbTrainer({ pageTabs }: EOLRbTrainerProps) {
                 const caseMastered = keys.filter((k) => progress[k] === "mastered").length;
                 const caseLearning = keys.filter((k) => progress[k] === "learning").length;
                 const caseFlagged = keys.filter((k) => progress[k] === "flagged").length;
-                const caseLearned = caseMastered + caseLearning + caseFlagged;
+                const caseLearned = caseMastered + caseLearning;
                 const caseMasteredPct = Math.round((caseMastered / keys.length) * 100);
                 const caseLearningPct = Math.round((caseLearning / keys.length) * 100);
                 const caseFlaggedPct = Math.round((caseFlagged / keys.length) * 100);

@@ -7,8 +7,8 @@ import { loadJSON, saveJSON } from "./Storage";
 // Tri-state: a key absent from the map means "not started". "learning"
 // (yellow) is for cases you're still shaky on; "mastered" (green) is for
 // ones you've got down; "flagged" (red) marks cases you find particularly
-// challenging. Any of the three counts as "learned" in the progress
-// counters -- green is the stricter "mastered" subset.
+// challenging. "learning" and "mastered" count as "learned" in the progress
+// counters (green is the stricter "mastered" subset); flagged cases don't.
 export type MasteryLevel = "learning" | "mastered" | "flagged";
 export type ProgressState = Record<string, MasteryLevel>;
 
@@ -53,8 +53,8 @@ export function masterySymbol(level: MasteryLevel | undefined): string {
     return "";
 }
 
-// A case counts as learned once it has any mark (still learning, mastered
-// or flagged).
+// A case counts as learned once it's marked still learning or mastered.
+// Flagged cases are excluded.
 export function isLearned(level: MasteryLevel | undefined): boolean {
-    return level !== undefined;
+    return level === "learning" || level === "mastered";
 }
